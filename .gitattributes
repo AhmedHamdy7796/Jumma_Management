@@ -1,0 +1,14 @@
+# Make Dart the primary language
+*.dart linguist-language=Dart
+
+# Ignore generated platform files
+android/** linguist-generated=true
+ios/** linguist-generated=true
+windows/** linguist-generated=true
+linux/** linguist-generated=true
+macos/** linguist-generated=true
+web/** linguist-generated=true
+
+# Ignore build and tool files
+build/** linguist-generated=true
+.dart_tool/** linguist-generated=true
