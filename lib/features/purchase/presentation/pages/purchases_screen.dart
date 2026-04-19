@@ -164,7 +164,11 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                         ),
                         itemCount: purchases.length,
                         itemBuilder: (context, index) {
-                          return _buildPurchaseCard(context, purchases[index], isGrid: true);
+                          return _buildPurchaseCard(
+                            context,
+                            purchases[index],
+                            isGrid: true,
+                          );
                         },
                       );
                     }
@@ -172,7 +176,11 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: purchases.length,
                       itemBuilder: (context, index) {
-                        return _buildPurchaseCard(context, purchases[index], isGrid: false);
+                        return _buildPurchaseCard(
+                          context,
+                          purchases[index],
+                          isGrid: false,
+                        );
                       },
                     );
                   },
@@ -242,7 +250,11 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
     );
   }
 
-  Widget _buildPurchaseCard(BuildContext context, Purchase purchase, {bool isGrid = false}) {
+  Widget _buildPurchaseCard(
+    BuildContext context,
+    Purchase purchase, {
+    bool isGrid = false,
+  }) {
     final dateFormat = DateFormat('yyyy/MM/dd');
 
     return Card(

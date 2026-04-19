@@ -198,18 +198,24 @@ class _FixesScreenState extends State<FixesScreen> {
                     return LayoutBuilder(
                       builder: (context, constraints) {
                         if (constraints.maxWidth > 600) {
-                          int crossAxisCount = (constraints.maxWidth / 350).floor();
+                          int crossAxisCount = (constraints.maxWidth / 350)
+                              .floor();
                           return GridView.builder(
                             padding: const EdgeInsets.all(16),
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              childAspectRatio: 1.8,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                            ),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  childAspectRatio: 1.8,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                ),
                             itemCount: fixes.length,
                             itemBuilder: (context, index) {
-                              return _buildFixCard(context, fixes[index], isGrid: true);
+                              return _buildFixCard(
+                                context,
+                                fixes[index],
+                                isGrid: true,
+                              );
                             },
                           );
                         }
@@ -217,7 +223,11 @@ class _FixesScreenState extends State<FixesScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: fixes.length,
                           itemBuilder: (context, index) {
-                            return _buildFixCard(context, fixes[index], isGrid: false);
+                            return _buildFixCard(
+                              context,
+                              fixes[index],
+                              isGrid: false,
+                            );
                           },
                         );
                       },

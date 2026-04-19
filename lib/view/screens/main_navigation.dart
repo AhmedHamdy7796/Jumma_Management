@@ -12,6 +12,12 @@ class MainNavigation extends StatefulWidget {
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
+class _NavItem {
+  final IconData icon;
+  final String label;
+  const _NavItem({required this.icon, required this.label});
+}
+
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
@@ -21,6 +27,19 @@ class _MainNavigationState extends State<MainNavigation> {
     const FixesScreen(),
     ProfileScreen(),
   ];
+
+  static const List<_NavItem> _navItems = [
+    _NavItem(icon: Icons.people, label: 'العملاء'),
+    _NavItem(icon: Icons.shopping_cart, label: 'المشتريات'),
+    _NavItem(icon: Icons.build, label: 'الصيانة'),
+    _NavItem(icon: Icons.person, label: 'الحساب'),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,22 +51,25 @@ class _MainNavigationState extends State<MainNavigation> {
               children: [
                 NavigationRail(
                   selectedIndex: _selectedIndex,
-                  onDestinationSelected: (index) {
-                    setState(() {
-                      _selectedIndex = index;
-                    });
-                  },
+                  onDestinationSelected: _onItemTapped,
                   labelType: NavigationRailLabelType.all,
-                  selectedIconTheme: IconThemeData(color: Theme.of(context).primaryColor),
-                  selectedLabelTextStyle: TextStyle(color: Theme.of(context).primaryColor, fontFamily: 'Arial'),
-                  destinations: const [
-                    NavigationRailDestination(icon: Icon(Icons.people), label: Text('العملاء')),
-                    NavigationRailDestination(icon: Icon(Icons.shopping_cart), label: Text('المشتريات')),
-                    NavigationRailDestination(icon: Icon(Icons.build), label: Text('الصيانة')),
-                    NavigationRailDestination(icon: Icon(Icons.person), label: Text('الحساب')),
-                  ],
+                  selectedIconTheme: IconThemeData(
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  selectedLabelTextStyle: TextStyle(
+                    color: Theme.of(context).primaryColor,
+                    fontFamily: 'Arial',
+                  ),
+                  destinations: _navItems.map((item) => NavigationRailDestination(
+                    icon: Icon(item.icon),
+                    label: Text(item.label),
+                  )).toList(),
                 ),
-                VerticalDivider(thickness: 1, width: 1, color: Colors.grey.shade300),
+                VerticalDivider(
+                  thickness: 1,
+                  width: 1,
+                  color: Colors.grey.shade300,
+                ),
                 Expanded(child: _screens[_selectedIndex]),
               ],
             ),
@@ -68,11 +90,7 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
             child: BottomNavigationBar(
               currentIndex: _selectedIndex,
-              onTap: (index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
+              onTap: _onItemTapped,
               selectedItemColor: Theme.of(context).primaryColor,
               unselectedItemColor: Colors.grey,
               selectedFontSize: 14,
@@ -80,15 +98,10 @@ class _MainNavigationState extends State<MainNavigation> {
               type: BottomNavigationBarType.fixed,
               backgroundColor: Colors.white,
               elevation: 0,
-              items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.people), label: 'العملاء'),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.shopping_cart),
-                  label: 'المشتريات',
-                ),
-                BottomNavigationBarItem(icon: Icon(Icons.build), label: 'الصيانة'),
-                BottomNavigationBarItem(icon: Icon(Icons.person), label: 'الحساب'),
-              ],
+              items: _navItems.map((item) => BottomNavigationBarItem(
+                icon: Icon(item.icon),
+                label: item.label,
+              )).toList(),
             ),
           ),
         );

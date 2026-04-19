@@ -123,7 +123,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         ),
                         itemCount: customers.length,
                         itemBuilder: (context, index) {
-                          return _buildCustomerCard(context, customers[index], isGrid: true);
+                          return _buildCustomerCard(
+                            context,
+                            customers[index],
+                            isGrid: true,
+                          );
                         },
                       );
                     }
@@ -131,7 +135,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: customers.length,
                       itemBuilder: (context, index) {
-                        return _buildCustomerCard(context, customers[index], isGrid: false);
+                        return _buildCustomerCard(
+                          context,
+                          customers[index],
+                          isGrid: false,
+                        );
                       },
                     );
                   },
@@ -159,7 +167,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
     );
   }
 
-  Widget _buildCustomerCard(BuildContext context, Customer customer, {bool isGrid = false}) {
+  Widget _buildCustomerCard(
+    BuildContext context,
+    Customer customer, {
+    bool isGrid = false,
+  }) {
     final dateFormat = DateFormat('yyyy/MM/dd');
 
     return Card(

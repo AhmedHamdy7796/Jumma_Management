@@ -1,31 +1,36 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gomaa_management/core/routes/app_router.dart';
-import 'package:gomaa_management/core/routes/routes.dart';
-import 'package:gomaa_management/core/theming/app_theme_data.dart';
-import 'package:gomaa_management/core/theming/theme_cubit.dart';
-import 'features/customer/presentation/cubit/customer_cubit.dart';
-import 'features/purchase/presentation/cubit/purchase_cubit.dart';
-import 'features/fix/presentation/cubit/fix_cubit.dart';
-import 'core/resources/app_strings.dart';
-
-import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
+
+import 'core/resources/app_strings.dart';
+import 'core/routes/app_router.dart';
+import 'core/routes/routes.dart';
+import 'core/theming/app_theme_data.dart';
+import 'core/theming/theme_cubit.dart';
+import 'features/customer/presentation/cubit/customer_cubit.dart';
+import 'features/fix/presentation/cubit/fix_cubit.dart';
+import 'features/purchase/presentation/cubit/purchase_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize sqflite for desktop
+  await _initializeDesktop();
+
+  runApp(MyApp());
+}
+
+Future<void> _initializeDesktop() async {
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    // Initialize sqflite for desktop
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-  }
 
-  // Initialize window_manager for desktop UI enhancements
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    // Initialize window_manager for desktop UI enhancements
     await windowManager.ensureInitialized();
-    WindowOptions windowOptions = const WindowOptions(
+    const WindowOptions windowOptions = WindowOptions(
       size: Size(1200, 800),
       minimumSize: Size(800, 600),
       center: true,
@@ -39,8 +44,6 @@ void main() async {
       await windowManager.focus();
     });
   }
-
-  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
