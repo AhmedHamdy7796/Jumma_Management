@@ -109,12 +109,31 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   }
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: customers.length,
-                  itemBuilder: (context, index) {
-                    final customer = customers[index];
-                    return _buildCustomerCard(context, customer);
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth > 600) {
+                      int crossAxisCount = (constraints.maxWidth / 350).floor();
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          childAspectRatio: 1.8,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: customers.length,
+                        itemBuilder: (context, index) {
+                          return _buildCustomerCard(context, customers[index], isGrid: true);
+                        },
+                      );
+                    }
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: customers.length,
+                      itemBuilder: (context, index) {
+                        return _buildCustomerCard(context, customers[index], isGrid: false);
+                      },
+                    );
                   },
                 );
               },
@@ -140,7 +159,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
     );
   }
 
-  Widget _buildCustomerCard(BuildContext context, Customer customer) {
+  Widget _buildCustomerCard(BuildContext context, Customer customer, {bool isGrid = false}) {
     final dateFormat = DateFormat('yyyy/MM/dd');
 
     return Card(

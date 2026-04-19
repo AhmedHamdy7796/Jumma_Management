@@ -150,12 +150,31 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                   }
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: purchases.length,
-                  itemBuilder: (context, index) {
-                    final purchase = purchases[index];
-                    return _buildPurchaseCard(context, purchase);
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth > 600) {
+                      int crossAxisCount = (constraints.maxWidth / 350).floor();
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          childAspectRatio: 1.8,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: purchases.length,
+                        itemBuilder: (context, index) {
+                          return _buildPurchaseCard(context, purchases[index], isGrid: true);
+                        },
+                      );
+                    }
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: purchases.length,
+                      itemBuilder: (context, index) {
+                        return _buildPurchaseCard(context, purchases[index], isGrid: false);
+                      },
+                    );
                   },
                 );
               },
@@ -223,7 +242,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
     );
   }
 
-  Widget _buildPurchaseCard(BuildContext context, Purchase purchase) {
+  Widget _buildPurchaseCard(BuildContext context, Purchase purchase, {bool isGrid = false}) {
     final dateFormat = DateFormat('yyyy/MM/dd');
 
     return Card(

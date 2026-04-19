@@ -195,12 +195,31 @@ class _FixesScreenState extends State<FixesScreen> {
                       }
                     }
 
-                    return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: fixes.length,
-                      itemBuilder: (context, index) {
-                        final fix = fixes[index];
-                        return _buildFixCard(context, fix);
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth > 600) {
+                          int crossAxisCount = (constraints.maxWidth / 350).floor();
+                          return GridView.builder(
+                            padding: const EdgeInsets.all(16),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              childAspectRatio: 1.8,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                            ),
+                            itemCount: fixes.length,
+                            itemBuilder: (context, index) {
+                              return _buildFixCard(context, fixes[index], isGrid: true);
+                            },
+                          );
+                        }
+                        return ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: fixes.length,
+                          itemBuilder: (context, index) {
+                            return _buildFixCard(context, fixes[index], isGrid: false);
+                          },
+                        );
                       },
                     );
                   },
@@ -271,7 +290,7 @@ class _FixesScreenState extends State<FixesScreen> {
     );
   }
 
-  Widget _buildFixCard(BuildContext context, Fix fix) {
+  Widget _buildFixCard(BuildContext context, Fix fix, {bool isGrid = false}) {
     final dateFormat = DateFormat('yyyy/MM/dd');
     Color statusColor;
     String statusText;
