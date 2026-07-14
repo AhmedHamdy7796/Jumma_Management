@@ -168,13 +168,17 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
 
                 return LayoutBuilder(
                   builder: (context, constraints) {
-                    if (constraints.maxWidth > 600) {
-                      int crossAxisCount = (constraints.maxWidth / 350).floor();
+                    final width = constraints.maxWidth;
+                    // Desktop/Large screen view
+                    if (width > 600) {
+                      // Adjust item width based on available screen space
+                      int crossAxisCount = (width / 360).floor();
+                      if (crossAxisCount < 1) crossAxisCount = 1;
                       return GridView.builder(
                         padding: const EdgeInsets.all(16),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
-                          childAspectRatio: 1.8,
+                          childAspectRatio: 1.35, // Gives more vertical space to prevent overflow
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
                         ),
@@ -187,8 +191,9 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                         },
                       );
                     }
+                    // Mobile view
                     return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       itemCount: purchases.length,
                       itemBuilder: (context, index) {
                         return _buildPurchaseCard(

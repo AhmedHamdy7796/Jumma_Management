@@ -49,7 +49,11 @@ class _SignupScreenState extends State<SignupScreen> {
               backgroundColor: AppColors.success,
             ),
           );
-          Navigator.pushReplacementNamed(context, Routes.mainNavigation);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            Routes.mainNavigation,
+            (route) => false,
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -78,104 +82,126 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.signup)),
+      appBar: AppBar(
+        title: const Text(AppStrings.signup),
+        automaticallyImplyLeading: false,
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Icon(
-                  Icons.person_add_rounded,
-                  size: 60,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: AppStrings.name,
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return AppStrings.enterName;
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: AppStrings.email,
-                    prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return AppStrings.enterEmail;
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: AppStrings.password,
-                    prefixIcon: Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(),
-                  ),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return AppStrings.enterPassword;
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  decoration: const InputDecoration(
-                    labelText: AppStrings.confirmPassword,
-                    prefixIcon: Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(),
-                  ),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return AppStrings.enterConfirmPassword;
-                    }
-                    if (value != _passwordController.text) {
-                      return AppStrings.passwordsNoMatch;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _signup,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                  ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: AppColors.white)
-                      : const Text(
-                          AppStrings.signup,
-                          style: TextStyle(fontSize: 18),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Icon(
+                      Icons.person_add_rounded,
+                      size: 60,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(height: 32),
+                    TextFormField(
+                      controller: _nameController,
+                      textAlign: TextAlign.right,
+                      textDirection: TextDirection.rtl,
+                      decoration: const InputDecoration(
+                        labelText: AppStrings.name,
+                        prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return AppStrings.enterName;
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _emailController,
+                      textAlign: TextAlign.right,
+                      textDirection: TextDirection.rtl,
+                      decoration: const InputDecoration(
+                        labelText: AppStrings.email,
+                        prefixIcon: Icon(Icons.email_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return AppStrings.enterEmail;
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _passwordController,
+                      textAlign: TextAlign.right,
+                      textDirection: TextDirection.rtl,
+                      decoration: const InputDecoration(
+                        labelText: AppStrings.password,
+                        prefixIcon: Icon(Icons.lock_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return AppStrings.enterPassword;
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _confirmPasswordController,
+                      textAlign: TextAlign.right,
+                      textDirection: TextDirection.rtl,
+                      decoration: const InputDecoration(
+                        labelText: AppStrings.confirmPassword,
+                        prefixIcon: Icon(Icons.lock_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return AppStrings.enterConfirmPassword;
+                        }
+                        if (value != _passwordController.text) {
+                          return AppStrings.passwordsNoMatch;
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : _signup,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: AppColors.white)
+                          : const Text(
+                              AppStrings.signup,
+                              style: TextStyle(fontSize: 18, fontFamily: 'Cairo'),
+                            ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(context, Routes.login);
+                      },
+                      child: const Text(
+                        AppStrings.haveAccount,
+                        style: TextStyle(fontFamily: 'Cairo'),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text(AppStrings.haveAccount),
-                ),
-              ],
+              ),
             ),
           ),
         ),

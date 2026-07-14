@@ -109,7 +109,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         padding: const EdgeInsets.all(16),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
-                          childAspectRatio: 1.8,
+                          childAspectRatio: 1.35,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
                         ),

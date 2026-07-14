@@ -162,6 +162,29 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         CustomTextField(label: 'رقم هاتف الشركة', controller: _companyPhoneController),
         CustomTextField(label: 'عنوان الشركة', controller: _companyAddressController),
         CustomTextField(label: 'رمز العملة المستخدمة في التطبيق', controller: _currencyController),
+        const SizedBox(height: 16),
+        const Text(
+          'لغة واجهة التطبيق (App Language)',
+          textAlign: TextAlign.right,
+          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: settings[SettingsKeys.language] ?? 'ar',
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'ar', child: Align(alignment: Alignment.centerRight, child: Text('العربية (Arabic)'))),
+            DropdownMenuItem(value: 'en', child: Align(alignment: Alignment.centerRight, child: Text('الانجليزية (English)'))),
+          ],
+          onChanged: (val) {
+            if (val != null) {
+              context.read<SettingsCubit>().updateSetting(SettingsKeys.language, val);
+            }
+          },
+        ),
         const SizedBox(height: 24),
         CustomButton(
           text: 'حفظ الإعدادات',
@@ -171,6 +194,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               SettingsKeys.companyPhone: _companyPhoneController.text,
               SettingsKeys.companyAddress: _companyAddressController.text,
               SettingsKeys.currencySymbol: _currencyController.text,
+              SettingsKeys.language: settings[SettingsKeys.language] ?? 'ar',
             });
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('تم حفظ الإعدادات بنجاح')),

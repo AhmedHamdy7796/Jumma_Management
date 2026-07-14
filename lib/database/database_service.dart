@@ -270,11 +270,11 @@ class DatabaseService {
         )
       ''');
 
-      // Default user
-      await txn.insert('users', {
-        'username': 'admin',
-        'password': 'admin',
-      });
+      // Default user — INSERT OR IGNORE prevents errors on duplicate runs
+      await txn.rawInsert('''
+        INSERT OR IGNORE INTO users (username, password)
+        VALUES ('admin', 'admin')
+      ''');
 
       // ── Indexes ──────────────────────────────────────────────────────────
 

@@ -30,13 +30,41 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   final List<Map<String, dynamic>> _navItems = [
-    {'icon': Icons.people_outline, 'activeIcon': Icons.people, 'title': 'العملاء'},
-    {'icon': Icons.shopping_cart_outlined, 'activeIcon': Icons.shopping_cart, 'title': 'المشتريات'},
-    {'icon': Icons.build_outlined, 'activeIcon': Icons.build, 'title': 'صيانة عملاء'},
-    {'icon': Icons.precision_manufacturing_outlined, 'activeIcon': Icons.precision_manufacturing, 'title': 'الأجهزة'},
-    {'icon': Icons.handyman_outlined, 'activeIcon': Icons.handyman, 'title': 'الصيانة الدورية'},
-    {'icon': Icons.search_outlined, 'activeIcon': Icons.search, 'title': 'بحث شامل'},
-    {'icon': Icons.settings_outlined, 'activeIcon': Icons.settings, 'title': 'الإعدادات'},
+    {
+      'icon': Icons.people_outline,
+      'activeIcon': Icons.people,
+      'title': 'العملاء',
+    },
+    {
+      'icon': Icons.shopping_cart_outlined,
+      'activeIcon': Icons.shopping_cart,
+      'title': 'المشتريات',
+    },
+    {
+      'icon': Icons.build_outlined,
+      'activeIcon': Icons.build,
+      'title': 'صيانة عملاء',
+    },
+    {
+      'icon': Icons.precision_manufacturing_outlined,
+      'activeIcon': Icons.precision_manufacturing,
+      'title': 'الأجهزة',
+    },
+    {
+      'icon': Icons.handyman_outlined,
+      'activeIcon': Icons.handyman,
+      'title': 'الصيانة الدورية',
+    },
+    {
+      'icon': Icons.search_outlined,
+      'activeIcon': Icons.search,
+      'title': 'بحث شامل',
+    },
+    {
+      'icon': Icons.settings_outlined,
+      'activeIcon': Icons.settings,
+      'title': 'الإعدادات',
+    },
   ];
 
   @override
@@ -67,16 +95,23 @@ class _MainNavigationState extends State<MainNavigation> {
               children: [
                 // Branding Header
                 Padding(
-                  padding: const EdgeInsets.only(top: 24, bottom: 16, left: 12, right: 12),
+                  padding: const EdgeInsets.only(
+                    top: 24,
+                    bottom: 16,
+                    left: 12,
+                    right: 12,
+                  ),
                   child: Row(
-                    mainAxisAlignment: _isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.end,
+                    mainAxisAlignment: _isCollapsed
+                        ? MainAxisAlignment.center
+                        : MainAxisAlignment.end,
                     children: [
                       if (!_isCollapsed) ...[
                         const Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              'جمعة لإدارة الأعمال',
+                              'جمعة للإستيراد والتصدير ',
                               style: TextStyle(
                                 fontFamily: 'Cairo',
                                 fontWeight: FontWeight.bold,
@@ -84,7 +119,7 @@ class _MainNavigationState extends State<MainNavigation> {
                               ),
                             ),
                             Text(
-                              'لوحة التحكم الإدارية',
+                              'لوحة التحكم',
                               style: TextStyle(
                                 fontFamily: 'Cairo',
                                 color: AppColors.darkGrey,
@@ -112,7 +147,7 @@ class _MainNavigationState extends State<MainNavigation> {
                 ),
                 const Divider(height: 1, thickness: 1),
                 const SizedBox(height: 16),
-                
+
                 // Navigation Items
                 Expanded(
                   child: ListView.builder(
@@ -121,7 +156,7 @@ class _MainNavigationState extends State<MainNavigation> {
                     itemBuilder: (context, index) {
                       final item = _navItems[index];
                       final isSelected = _selectedIndex == index;
-                      
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: InkWell(
@@ -133,14 +168,21 @@ class _MainNavigationState extends State<MainNavigation> {
                           borderRadius: BorderRadius.circular(12),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 12,
+                            ),
                             decoration: BoxDecoration(
-                              gradient: isSelected ? AppColors.primaryGradient : null,
+                              gradient: isSelected
+                                  ? AppColors.primaryGradient
+                                  : null,
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: isSelected
                                   ? [
                                       BoxShadow(
-                                        color: AppColors.primary.withValues(alpha: 0.25),
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.25,
+                                        ),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       ),
@@ -148,7 +190,9 @@ class _MainNavigationState extends State<MainNavigation> {
                                   : null,
                             ),
                             child: Row(
-                              mainAxisAlignment: _isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.end,
+                              mainAxisAlignment: _isCollapsed
+                                  ? MainAxisAlignment.center
+                                  : MainAxisAlignment.end,
                               children: [
                                 if (!_isCollapsed) ...[
                                   Text(
@@ -156,19 +200,27 @@ class _MainNavigationState extends State<MainNavigation> {
                                     style: TextStyle(
                                       fontFamily: 'Cairo',
                                       fontSize: 13,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                       color: isSelected
                                           ? AppColors.white
-                                          : (isDark ? AppColors.lightGrey : AppColors.secondary),
+                                          : (isDark
+                                                ? AppColors.lightGrey
+                                                : AppColors.secondary),
                                     ),
                                   ),
                                   const Spacer(),
                                 ],
                                 Icon(
-                                  isSelected ? item['activeIcon'] : item['icon'],
+                                  isSelected
+                                      ? item['activeIcon']
+                                      : item['icon'],
                                   color: isSelected
                                       ? AppColors.white
-                                      : (isDark ? AppColors.lightGrey : AppColors.primary),
+                                      : (isDark
+                                            ? AppColors.lightGrey
+                                            : AppColors.primary),
                                   size: 22,
                                 ),
                               ],
@@ -179,16 +231,23 @@ class _MainNavigationState extends State<MainNavigation> {
                     },
                   ),
                 ),
-                
+
                 // Collapse Toggle Button
                 const Divider(height: 1, thickness: 1),
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16.0,
+                    horizontal: 12.0,
+                  ),
                   child: Align(
-                    alignment: _isCollapsed ? Alignment.center : Alignment.centerLeft,
+                    alignment: _isCollapsed
+                        ? Alignment.center
+                        : Alignment.centerLeft,
                     child: IconButton(
                       icon: Icon(
-                        _isCollapsed ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
+                        _isCollapsed
+                            ? Icons.arrow_forward_ios
+                            : Icons.arrow_back_ios,
                         size: 16,
                       ),
                       onPressed: () {
@@ -202,7 +261,7 @@ class _MainNavigationState extends State<MainNavigation> {
               ],
             ),
           ),
-          
+
           // Main content area
           Expanded(
             child: Container(
@@ -210,10 +269,7 @@ class _MainNavigationState extends State<MainNavigation> {
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 250),
                 transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  );
+                  return FadeTransition(opacity: animation, child: child);
                 },
                 child: KeyedSubtree(
                   key: ValueKey<int>(_selectedIndex),

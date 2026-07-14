@@ -140,7 +140,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
               child: DropdownButtonFormField<String>(
-                value: _maintType,
+                initialValue: _maintType,
                 decoration: const InputDecoration(
                   labelText: 'نوع العملية',
                   border: OutlineInputBorder(),
@@ -167,7 +167,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16.0),
                   child: DropdownButtonFormField<int>(
-                    value: _selectedEquipmentId,
+                    initialValue: _selectedEquipmentId,
                     decoration: const InputDecoration(
                       labelText: 'اختر الجهاز/المعدة المعنية',
                       border: OutlineInputBorder(),
@@ -190,7 +190,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
             ),
             if (_maintType == 'preventive') ...[
               DropdownButtonFormField<String>(
-                value: _scheduleType,
+                initialValue: _scheduleType,
                 decoration: const InputDecoration(
                   labelText: 'نوع الصيانة المجدولة',
                   border: OutlineInputBorder(),

@@ -392,11 +392,12 @@ class MigrationManager {
       )
     ''');
     
-    // Add default admin user so that the application has a default login on first run
-    await db.insert('users', {
-      'username': 'admin',
-      'password': 'admin', // In real app, hash this. Simple offline app is fine.
-    });
+    // Add default admin user — INSERT OR IGNORE prevents duplicates
+    // if the migration runs more than once on the same database.
+    await db.rawInsert('''
+      INSERT OR IGNORE INTO users (username, password)
+      VALUES ('admin', 'admin')
+    ''');
   }
 }
 

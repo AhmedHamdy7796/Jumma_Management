@@ -97,7 +97,7 @@ class _EquipmentScreenState extends State<EquipmentScreen> {
                         padding: const EdgeInsets.all(16),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
-                          childAspectRatio: 1.8,
+                          childAspectRatio: 1.3,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
                         ),

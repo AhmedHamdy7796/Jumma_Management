@@ -253,7 +253,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                       labelText: AppStrings.purchases,
                       border: OutlineInputBorder(),
                     ),
-                    value:
+                    initialValue:
                         _purchasesController.text.isNotEmpty &&
                             purchases.any(
                               (p) => p.machineName == _purchasesController.text,

@@ -5,6 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+import 'package:gomaa_management/database/database_constants.dart';
 import 'core/resources/app_strings.dart';
 import 'core/routes/app_router.dart';
 import 'core/routes/routes.dart';
@@ -96,16 +99,35 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => BackupCubit()),
         BlocProvider(create: (_) => ThemeCubit()),
       ],
-      child: BlocBuilder<ThemeCubit, ThemeMode>(
-        builder: (context, themeMode) {
-          return MaterialApp(
-            title: AppStrings.appTitle,
-            debugShowCheckedModeBanner: false,
-            theme: AppThemeData.lightTheme,
-            darkTheme: AppThemeData.darkTheme,
-            themeMode: themeMode,
-            onGenerateRoute: _appRouter.onGenerateRoute,
-            initialRoute: Routes.splash,
+      child: BlocBuilder<SettingsCubit, SettingsState>(
+        builder: (context, settingsState) {
+          String selectedLanguage = 'ar';
+          if (settingsState is SettingsLoaded) {
+            selectedLanguage = settingsState.settings[SettingsKeys.language] ?? 'ar';
+          }
+
+          return BlocBuilder<ThemeCubit, ThemeMode>(
+            builder: (context, themeMode) {
+              return MaterialApp(
+                title: AppStrings.appTitle,
+                debugShowCheckedModeBanner: false,
+                theme: AppThemeData.lightTheme,
+                darkTheme: AppThemeData.darkTheme,
+                themeMode: themeMode,
+                locale: Locale(selectedLanguage, ''),
+                supportedLocales: const [
+                  Locale('ar', ''),
+                  Locale('en', ''),
+                ],
+                localizationsDelegates: const [
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                onGenerateRoute: _appRouter.onGenerateRoute,
+                initialRoute: Routes.splash,
+              );
+            },
           );
         },
       ),

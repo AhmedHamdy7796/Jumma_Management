@@ -14,7 +14,7 @@ class AppStrings {
   static const String paid = 'المدفوع';
   static const String remaining = 'الباقي';
   static const String addCustomer = 'إضافة عميل';
-  static const String addPurchase = 'إضافة مشترى';
+  static const String addPurchase = 'إضافة عملية شراء';
   static const String addFix = 'إضافة صيانة';
   static const String editCustomer = 'تعديل عميل';
   static const String editPurchase = 'تعديل مشترى';

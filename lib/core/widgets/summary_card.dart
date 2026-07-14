@@ -93,7 +93,7 @@ class SummaryCard extends StatelessWidget {
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      '${amount.toStringAsFixed(2)} $currency',
+                      '${amount % 1 == 0 ? amount.toInt().toString() : amount.toStringAsFixed(2)} $currency',
                       textDirection: TextDirection.rtl,
                       style: TextStyle(
                         fontSize: 20,
