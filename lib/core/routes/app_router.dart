@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gomaa_management/core/routes/routes.dart';
-import 'package:gomaa_management/features/auth/presentation/pages/login_screen.dart';
-import 'package:gomaa_management/features/auth/presentation/pages/signup_screen.dart';
-import 'package:gomaa_management/features/splash/presentation/pages/splash_screen.dart';
-import 'package:gomaa_management/view/screens/main_navigation.dart';
+import 'package:gomaa_management/screens/auth/login_screen.dart';
+import 'package:gomaa_management/screens/auth/signup_screen.dart';
+import 'package:gomaa_management/screens/splash/splash_screen.dart';
+import 'package:gomaa_management/screens/navigation/main_navigation.dart';
 
 class AppRouter {
   Route? onGenerateRoute(RouteSettings settings) {

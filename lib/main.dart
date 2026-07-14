@@ -10,12 +10,34 @@ import 'core/routes/app_router.dart';
 import 'core/routes/routes.dart';
 import 'core/theming/app_theme_data.dart';
 import 'core/theming/theme_cubit.dart';
-import 'features/customer/presentation/cubit/customer_cubit.dart';
-import 'features/fix/presentation/cubit/fix_cubit.dart';
-import 'features/purchase/presentation/cubit/purchase_cubit.dart';
+import 'core/logging/app_logger.dart';
+
+// DI Repositories
+import 'repositories/customer_repository.dart';
+import 'repositories/purchase_repository.dart';
+import 'repositories/fix_repository.dart';
+import 'repositories/equipment_repository.dart';
+import 'repositories/maintenance_repository.dart';
+import 'repositories/settings_repository.dart';
+import 'repositories/audit_log_repository.dart';
+import 'repositories/search_repository.dart';
+
+// DI Cubits
+import 'cubits/customer/customer_cubit.dart';
+import 'cubits/purchase/purchase_cubit.dart';
+import 'cubits/fix/fix_cubit.dart';
+import 'cubits/equipment/equipment_cubit.dart';
+import 'cubits/maintenance/maintenance_cubit.dart';
+import 'cubits/settings/settings_cubit.dart';
+import 'cubits/backup/backup_cubit.dart';
+import 'cubits/audit_log/audit_log_cubit.dart';
+import 'cubits/search/search_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize daily file logger first
+  await AppLogger.instance.initialize();
 
   await _initializeDesktop();
 
@@ -24,11 +46,9 @@ void main() async {
 
 Future<void> _initializeDesktop() async {
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    // Initialize sqflite for desktop
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
 
-    // Initialize window_manager for desktop UI enhancements
     await windowManager.ensureInitialized();
     const WindowOptions windowOptions = WindowOptions(
       size: Size(1200, 800),
@@ -48,15 +68,32 @@ Future<void> _initializeDesktop() async {
 
 class MyApp extends StatelessWidget {
   final AppRouter _appRouter = AppRouter();
+
+  // Shared repository instances for Dependency Injection
+  final customerRepo = CustomerRepository();
+  final purchaseRepo = PurchaseRepository();
+  final fixRepo = FixRepository();
+  final equipmentRepo = EquipmentRepository();
+  final maintenanceRepo = MaintenanceRepository();
+  final settingsRepo = SettingsRepository();
+  final auditLogRepo = AuditLogRepository();
+  final searchRepo = SearchRepository();
+
   MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => CustomerCubit()..loadCustomers()),
-        BlocProvider(create: (_) => PurchaseCubit()..loadPurchases()),
-        BlocProvider(create: (_) => FixCubit()..loadFixes()),
+        BlocProvider(create: (_) => CustomerCubit(customerRepo)..loadCustomers()),
+        BlocProvider(create: (_) => PurchaseCubit(purchaseRepo)..loadPurchases()),
+        BlocProvider(create: (_) => FixCubit(fixRepo)..loadFixes()),
+        BlocProvider(create: (_) => EquipmentCubit(equipmentRepo)..loadEquipment()),
+        BlocProvider(create: (_) => MaintenanceCubit(maintenanceRepo)..loadMaintenanceData()),
+        BlocProvider(create: (_) => SettingsCubit(settingsRepo)..loadSettings()),
+        BlocProvider(create: (_) => AuditLogCubit(auditLogRepo)),
+        BlocProvider(create: (_) => SearchCubit(searchRepo)),
+        BlocProvider(create: (_) => BackupCubit()),
         BlocProvider(create: (_) => ThemeCubit()),
       ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(
