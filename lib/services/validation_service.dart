@@ -45,6 +45,14 @@ class ValidationService {
     return null;
   }
 
+  /// Generic required validation with default message.
+  static String? validateRequiredField(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'هذا الحقل مطلوب';
+    }
+    return null;
+  }
+
   /// Validates generic numeric fields.
   static String? validateQuantity(String? value) {
     if (value == null || value.trim().isEmpty) {

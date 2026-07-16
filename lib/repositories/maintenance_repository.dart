@@ -205,7 +205,7 @@ class MaintenanceRepository implements IMaintenanceRepository {
       if (id != -1) {
         await _auditLogRepository.log(
           operation: AuditOperation.maintenance,
-          entityType: AuditEntityType.equipment,
+          entityType: AuditEntityType.inventory,
           entityId: item.equipmentId,
           description: 'جدولة عملية صيانة جديدة للمعدة ذات الرقم #${item.equipmentId} بتاريخ: ${item.scheduledDate.toLocal()}',
         );
@@ -235,7 +235,7 @@ class MaintenanceRepository implements IMaintenanceRepository {
       if (count > 0 && item.id != null) {
         await _auditLogRepository.log(
           operation: AuditOperation.maintenance,
-          entityType: AuditEntityType.equipment,
+          entityType: AuditEntityType.inventory,
           entityId: item.equipmentId,
           description: 'تعديل جدول صيانة للمعدة ذات الرقم #${item.equipmentId} (مكتملة: ${item.isCompleted})',
         );
@@ -274,7 +274,7 @@ class MaintenanceRepository implements IMaintenanceRepository {
       if (count > 0) {
         await _auditLogRepository.log(
           operation: AuditOperation.delete,
-          entityType: AuditEntityType.equipment,
+          entityType: AuditEntityType.inventory,
           entityId: item.equipmentId,
           description: 'حذف موعد صيانة مجدول للمعدة ذات الرقم #${item.equipmentId}',
         );

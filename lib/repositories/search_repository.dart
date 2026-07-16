@@ -22,7 +22,7 @@ class SearchRepository implements ISearchRepository {
       final wildCardQuery = '%$query%';
 
       // We query name/mobile from customers, machineName/model from purchases, 
-      // machineName/issue from fixes, name/serialNumber/model from equipment.
+      // machineName/issue from fixes, name/model from inventory.
       // We use SQL UNION to combine them, utilizing indexes on those fields.
       final sql = '''
         SELECT '${AuditEntityType.customer}' AS type, ${CustomerColumns.id} AS id, ${CustomerColumns.name} AS title, ${CustomerColumns.mobilePhone} AS subtitle
@@ -37,9 +37,9 @@ class SearchRepository implements ISearchRepository {
           FROM ${TableNames.fixes} 
           WHERE ${FixColumns.machineName} LIKE ? OR ${FixColumns.issue} LIKE ?
         UNION ALL
-        SELECT '${AuditEntityType.equipment}' AS type, ${EquipmentColumns.id} AS id, ${EquipmentColumns.name} AS title, ${EquipmentColumns.model} AS subtitle
-          FROM ${TableNames.equipment} 
-          WHERE ${EquipmentColumns.name} LIKE ? OR ${EquipmentColumns.serialNumber} LIKE ? OR ${EquipmentColumns.model} LIKE ?
+        SELECT '${AuditEntityType.inventory}' AS type, ${InventoryColumns.id} AS id, ${InventoryColumns.name} AS title, ${InventoryColumns.model} AS subtitle
+          FROM ${TableNames.inventory} 
+          WHERE ${InventoryColumns.name} LIKE ? OR ${InventoryColumns.model} LIKE ?
         LIMIT 50
       ''';
 
@@ -49,7 +49,7 @@ class SearchRepository implements ISearchRepository {
           wildCardQuery, wildCardQuery, // customer
           wildCardQuery, wildCardQuery, // purchase
           wildCardQuery, wildCardQuery, // fix
-          wildCardQuery, wildCardQuery, wildCardQuery // equipment
+          wildCardQuery, wildCardQuery, // inventory
         ],
       );
 
@@ -70,8 +70,8 @@ class SearchRepository implements ISearchRepository {
           case AuditEntityType.fix:
             icon = Icons.build;
             break;
-          case AuditEntityType.equipment:
-            icon = Icons.precision_manufacturing;
+          case AuditEntityType.inventory:
+            icon = Icons.inventory_2;
             break;
           default:
             icon = Icons.search;

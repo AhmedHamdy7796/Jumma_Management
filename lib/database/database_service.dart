@@ -139,17 +139,12 @@ class DatabaseService {
 
       await txn.execute('''
         CREATE TABLE customers (
-          id               INTEGER PRIMARY KEY AUTOINCREMENT,
-          name             TEXT    NOT NULL,
-          mobilePhone      TEXT    NOT NULL,
-          transactionType  TEXT    NOT NULL,
-          purchases        TEXT    NOT NULL DEFAULT '',
-          model            TEXT    NOT NULL DEFAULT '',
-          amount           REAL    NOT NULL,
-          paidAmount       REAL    NOT NULL,
-          remainingBalance REAL    NOT NULL,
-          date             TEXT    NOT NULL,
-          notes            TEXT    NOT NULL DEFAULT ''
+          id          INTEGER PRIMARY KEY AUTOINCREMENT,
+          name        TEXT NOT NULL,
+          mobilePhone TEXT NOT NULL,
+          companyName TEXT,
+          address     TEXT,
+          notes       TEXT NOT NULL DEFAULT ''
         )
       ''');
 
@@ -187,17 +182,32 @@ class DatabaseService {
       // ── New tables ───────────────────────────────────────────────────────
 
       await txn.execute('''
-        CREATE TABLE equipment (
-          id             INTEGER PRIMARY KEY AUTOINCREMENT,
-          name           TEXT    NOT NULL,
-          model          TEXT    NOT NULL DEFAULT '',
-          serialNumber   TEXT,
-          category       TEXT    NOT NULL DEFAULT '',
-          purchaseDate   TEXT,
-          purchasePrice  REAL    NOT NULL DEFAULT 0,
-          currentStatus  TEXT    NOT NULL DEFAULT 'active',
-          location       TEXT,
-          notes          TEXT    NOT NULL DEFAULT ''
+        CREATE TABLE sales_invoices (
+          id               INTEGER PRIMARY KEY AUTOINCREMENT,
+          customerId       INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+          itemName         TEXT    NOT NULL,
+          model            TEXT    NOT NULL DEFAULT '',
+          quantity         INTEGER NOT NULL DEFAULT 1,
+          price            REAL    NOT NULL,
+          totalAmount      REAL    NOT NULL,
+          paidAmount       REAL    NOT NULL,
+          remainingBalance REAL    NOT NULL,
+          date             TEXT    NOT NULL,
+          notes            TEXT    NOT NULL DEFAULT ''
+        )
+      ''');
+
+      await txn.execute('''
+        CREATE TABLE inventory (
+          id            INTEGER PRIMARY KEY AUTOINCREMENT,
+          name          TEXT    NOT NULL,
+          model         TEXT    NOT NULL DEFAULT '',
+          quantity      INTEGER NOT NULL DEFAULT 0,
+          category      TEXT    NOT NULL DEFAULT '',
+          purchasePrice REAL    NOT NULL DEFAULT 0,
+          sellingPrice  REAL    NOT NULL DEFAULT 0,
+          location      TEXT,
+          notes         TEXT    NOT NULL DEFAULT ''
         )
       ''');
 
@@ -205,7 +215,7 @@ class DatabaseService {
         CREATE TABLE maintenance_records (
           id               INTEGER PRIMARY KEY AUTOINCREMENT,
           equipmentId      INTEGER NOT NULL
-                           REFERENCES equipment(id) ON DELETE CASCADE,
+                           REFERENCES inventory(id) ON DELETE CASCADE,
           technicianName   TEXT    NOT NULL,
           startDate        TEXT    NOT NULL,
           endDate          TEXT,
@@ -221,7 +231,7 @@ class DatabaseService {
         CREATE TABLE maintenance_schedule (
           id              INTEGER PRIMARY KEY AUTOINCREMENT,
           equipmentId     INTEGER NOT NULL
-                          REFERENCES equipment(id) ON DELETE CASCADE,
+                          REFERENCES inventory(id) ON DELETE CASCADE,
           scheduledDate   TEXT    NOT NULL,
           type            TEXT    NOT NULL DEFAULT 'preventive',
           reminderEnabled INTEGER NOT NULL DEFAULT 1,
@@ -286,10 +296,23 @@ class DatabaseService {
         'CREATE INDEX idx_customers_phone ON customers(mobilePhone)',
       );
       await txn.execute(
-        'CREATE INDEX idx_customers_date ON customers(date)',
+        'CREATE INDEX idx_customers_name_phone ON customers(name, mobilePhone)',
+      );
+
+      // sales_invoices
+      await txn.execute(
+        'CREATE INDEX idx_sales_customer ON sales_invoices(customerId)',
       );
       await txn.execute(
-        'CREATE INDEX idx_customers_name_phone ON customers(name, mobilePhone)',
+        'CREATE INDEX idx_sales_date ON sales_invoices(date)',
+      );
+
+      // inventory
+      await txn.execute(
+        'CREATE INDEX idx_inventory_name ON inventory(name)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_inventory_category ON inventory(category)',
       );
 
       // purchases
@@ -298,25 +321,6 @@ class DatabaseService {
       );
       await txn.execute(
         'CREATE INDEX idx_purchases_date ON purchases(date)',
-      );
-
-      // fixes
-      await txn.execute(
-        'CREATE INDEX idx_fixes_machine ON fixes(machineName)',
-      );
-      await txn.execute(
-        'CREATE INDEX idx_fixes_status ON fixes(status)',
-      );
-      await txn.execute(
-        'CREATE INDEX idx_fixes_date ON fixes(date)',
-      );
-
-      // equipment
-      await txn.execute(
-        'CREATE INDEX idx_equipment_name ON equipment(name)',
-      );
-      await txn.execute(
-        'CREATE INDEX idx_equipment_status ON equipment(currentStatus)',
       );
 
       // maintenance_records

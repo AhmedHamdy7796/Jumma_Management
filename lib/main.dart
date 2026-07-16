@@ -19,7 +19,8 @@ import 'core/logging/app_logger.dart';
 import 'repositories/customer_repository.dart';
 import 'repositories/purchase_repository.dart';
 import 'repositories/fix_repository.dart';
-import 'repositories/equipment_repository.dart';
+import 'repositories/inventory_repository.dart';
+import 'repositories/sales_invoice_repository.dart';
 import 'repositories/maintenance_repository.dart';
 import 'repositories/settings_repository.dart';
 import 'repositories/audit_log_repository.dart';
@@ -29,7 +30,8 @@ import 'repositories/search_repository.dart';
 import 'cubits/customer/customer_cubit.dart';
 import 'cubits/purchase/purchase_cubit.dart';
 import 'cubits/fix/fix_cubit.dart';
-import 'cubits/equipment/equipment_cubit.dart';
+import 'cubits/inventory/inventory_cubit.dart';
+import 'cubits/sales_invoice/sales_invoice_cubit.dart';
 import 'cubits/maintenance/maintenance_cubit.dart';
 import 'cubits/settings/settings_cubit.dart';
 import 'cubits/backup/backup_cubit.dart';
@@ -76,7 +78,8 @@ class MyApp extends StatelessWidget {
   final customerRepo = CustomerRepository();
   final purchaseRepo = PurchaseRepository();
   final fixRepo = FixRepository();
-  final equipmentRepo = EquipmentRepository();
+  final inventoryRepo = InventoryRepository();
+  final salesInvoiceRepo = SalesInvoiceRepository();
   final maintenanceRepo = MaintenanceRepository();
   final settingsRepo = SettingsRepository();
   final auditLogRepo = AuditLogRepository();
@@ -91,7 +94,8 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => CustomerCubit(customerRepo)..loadCustomers()),
         BlocProvider(create: (_) => PurchaseCubit(purchaseRepo)..loadPurchases()),
         BlocProvider(create: (_) => FixCubit(fixRepo)..loadFixes()),
-        BlocProvider(create: (_) => EquipmentCubit(equipmentRepo)..loadEquipment()),
+        BlocProvider(create: (_) => InventoryCubit(inventoryRepo)..loadInventory()),
+        BlocProvider(create: (_) => SalesInvoiceCubit(salesInvoiceRepo)..loadAll()),
         BlocProvider(create: (_) => MaintenanceCubit(maintenanceRepo)..loadMaintenanceData()),
         BlocProvider(create: (_) => SettingsCubit(settingsRepo)..loadSettings()),
         BlocProvider(create: (_) => AuditLogCubit(auditLogRepo)),

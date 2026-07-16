@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gomaa_management/cubits/maintenance/maintenance_cubit.dart';
-import 'package:gomaa_management/cubits/equipment/equipment_cubit.dart';
+import 'package:gomaa_management/cubits/inventory/inventory_cubit.dart';
 import 'package:gomaa_management/models/maintenance_record_model.dart';
 import 'package:gomaa_management/models/maintenance_schedule_model.dart';
-import 'package:gomaa_management/models/equipment_model.dart';
+import 'package:gomaa_management/models/inventory_model.dart';
 import 'package:gomaa_management/core/widgets/custom_text_field.dart';
 import 'package:gomaa_management/core/widgets/custom_button.dart';
 import 'package:gomaa_management/core/resources/app_colors.dart';
@@ -29,14 +29,15 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
 
   int? _selectedEquipmentId;
   String _maintType = 'preventive'; // 'preventive' | 'record'
-  String _scheduleType = 'preventive'; // 'preventive' | 'inspection' | 'calibration'
+  String _scheduleType =
+      'preventive'; // 'preventive' | 'inspection' | 'calibration'
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    context.read<EquipmentCubit>().loadEquipment();
+    context.read<InventoryCubit>().loadInventory();
   }
 
   @override
@@ -66,7 +67,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   Future<void> _saveMaintenance() async {
     if (!_formKey.currentState!.validate() || _selectedEquipmentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الرجاء اختيار الجهاز والمعدّة')),
+        const SnackBar(content: Text('الرجاء اختيار الصنف المعني من المخزون')),
       );
       return;
     }
@@ -102,14 +103,17 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(AppStrings.addSuccess)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text(AppStrings.addSuccess)));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(AppStrings.error), backgroundColor: AppColors.error),
+          const SnackBar(
+            content: Text(AppStrings.error),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {
@@ -125,7 +129,10 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إضافة عملية صيانة', style: TextStyle(fontFamily: 'Arial', fontWeight: FontWeight.bold)),
+        title: const Text(
+          'إضافة عملية صيانة',
+          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: AppColors.primary,
@@ -146,8 +153,14 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'preventive', child: Text('جدولة صيانة دورية وقائية')),
-                  DropdownMenuItem(value: 'record', child: Text('تسجيل عملية صيانة منفذة بالفعل')),
+                  DropdownMenuItem(
+                    value: 'preventive',
+                    child: Text('جدولة صيانة دورية وقائية'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'record',
+                    child: Text('تسجيل عملية صيانة منفذة بالفعل'),
+                  ),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -156,12 +169,12 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                 },
               ),
             ),
-            // Equipment Selector Dropdown
-            BlocBuilder<EquipmentCubit, EquipmentState>(
+            // Inventory Item Selector Dropdown
+            BlocBuilder<InventoryCubit, InventoryState>(
               builder: (context, state) {
-                List<EquipmentModel> items = [];
-                if (state is EquipmentLoaded) {
-                  items = state.equipment;
+                List<InventoryModel> items = [];
+                if (state is InventoryLoaded) {
+                  items = state.items;
                 }
 
                 return Padding(
@@ -169,7 +182,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                   child: DropdownButtonFormField<int>(
                     initialValue: _selectedEquipmentId,
                     decoration: const InputDecoration(
-                      labelText: 'اختر الجهاز/المعدة المعنية',
+                      labelText: 'اختر الصنف من المخزون المعني بالصيانة',
                       border: OutlineInputBorder(),
                     ),
                     items: items.map((e) {
@@ -183,71 +196,103 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                         _selectedEquipmentId = value;
                       });
                     },
-                    validator: (val) => val == null ? 'الرجاء اختيار الجهاز' : null,
                   ),
                 );
               },
             ),
+
+            // Condition Layout Fields based on choice
             if (_maintType == 'preventive') ...[
-              DropdownButtonFormField<String>(
-                initialValue: _scheduleType,
-                decoration: const InputDecoration(
-                  labelText: 'نوع الصيانة المجدولة',
-                  border: OutlineInputBorder(),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: DropdownButtonFormField<String>(
+                  initialValue: _scheduleType,
+                  decoration: const InputDecoration(
+                    labelText: 'تصنيف الصيانة المجدولة',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'preventive',
+                      child: Text('صيانة وقائية'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'inspection',
+                      child: Text('فحص ومعاينة'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'calibration',
+                      child: Text('معايرة وضبط'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _scheduleType = value!;
+                    });
+                  },
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'preventive', child: Text('صيانة وقائية')),
-                  DropdownMenuItem(value: 'inspection', child: Text('فحص واختبار')),
-                  DropdownMenuItem(value: 'calibration', child: Text('معايرة وضبط')),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _scheduleType = value!;
-                  });
-                },
               ),
-              const SizedBox(height: 16),
             ] else ...[
               CustomTextField(
-                label: 'اسم فني الصيانة',
                 controller: _techController,
-                validator: ValidationService.validateName,
+                label: 'اسم الفني',
+                validator: ValidationService.validateRequiredField,
               ),
+              const SizedBox(height: 12),
               CustomTextField(
-                label: 'وصف العطل أو المشكلة',
                 controller: _issueController,
-                validator: (val) => ValidationService.validateRequired(val, 'الرجاء كتابة المشكلة'),
+                label: 'المشكلة / العطل',
+                validator: ValidationService.validateRequiredField,
               ),
+              const SizedBox(height: 12),
               CustomTextField(
-                label: 'تفاصيل ما تم إنجازه وصيانته',
                 controller: _workDoneController,
+                label: 'الإجراء المتخذ / قطع الغيار',
+                validator: ValidationService.validateRequiredField,
               ),
+              const SizedBox(height: 12),
               CustomTextField(
-                label: 'التكلفة الإجمالية للصيانة',
                 controller: _costController,
-                keyboardType: TextInputType.number,
-                validator: ValidationService.validateAmount,
+                label: 'التكلفة الإجمالية',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: ValidationService.validateRequiredField,
               ),
             ],
-            CustomTextField(
-              label: 'التاريخ المجدول / تاريخ البدء',
-              controller: TextEditingController(
-                text: DateFormatter.toDisplay(_selectedDate),
+
+            const SizedBox(height: 12),
+            // Date Picker trigger
+            ListTile(
+              title: const Text(
+                'تاريخ العملية / الموعد المخطط',
+                style: TextStyle(fontFamily: 'Cairo'),
               ),
-              readOnly: true,
+              subtitle: Text(
+                DateFormatter.toDisplay(_selectedDate),
+                style: const TextStyle(fontFamily: 'Cairo'),
+              ),
+              trailing: const Icon(
+                Icons.calendar_today,
+                color: AppColors.primaryAccent,
+              ),
               onTap: _selectDate,
-              suffixIcon: const Icon(Icons.calendar_today),
+              shape: RoundedRectangleBorder(
+                side: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
+            const SizedBox(height: 16),
             CustomTextField(
-              label: AppStrings.notes,
               controller: _notesController,
+              label: 'ملاحظات إضافية',
               maxLines: 3,
             ),
             const SizedBox(height: 24),
             CustomButton(
-              text: AppStrings.add,
-              onPressed: _saveMaintenance,
+              text: 'حفظ وتأكيد العملية',
               isLoading: _isLoading,
+              onPressed: _saveMaintenance,
             ),
           ],
         ),

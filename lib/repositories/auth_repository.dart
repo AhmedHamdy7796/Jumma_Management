@@ -66,4 +66,40 @@ class AuthRepository implements IAuthRepository {
       throw AppDatabaseException(technicalDetail: e.toString());
     }
   }
+
+  @override
+  Future<List<String>> getAllUsers() async {
+    try {
+      final db = await _dbService.database;
+      final results = await db.query('users', columns: ['username']);
+      return results.map((row) => row['username'] as String).toList();
+    } catch (e) {
+      AppLogger.instance.error('Error fetching all users', tag: _tag, exception: e);
+      throw AppDatabaseException(technicalDetail: e.toString());
+    }
+  }
+
+  @override
+  Future<bool> deleteUser(String username) async {
+    if (username.trim().toLowerCase() == 'admin') {
+      AppLogger.instance.warning('Cannot delete admin user', tag: _tag);
+      return false;
+    }
+    try {
+      final db = await _dbService.database;
+      final count = await db.delete(
+        'users',
+        where: 'username = ?',
+        whereArgs: [username.trim()],
+      );
+      if (count > 0) {
+        AppLogger.instance.info('User deleted successfully: $username', tag: _tag);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      AppLogger.instance.error('Error deleting user: $username', tag: _tag, exception: e);
+      throw AppDatabaseException(technicalDetail: e.toString());
+    }
+  }
 }

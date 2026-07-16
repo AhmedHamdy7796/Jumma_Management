@@ -115,7 +115,8 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                     source: ImageSource.gallery,
                   );
                   if (image != null) {
-                    final savedRelativePath = await _imageStorageService.saveImage(File(image.path), 'purchases');
+                    final savedRelativePath = await _imageStorageService
+                        .saveImage(File(image.path), 'purchases');
                     setState(() {
                       _imagePath = savedRelativePath;
                     });
@@ -132,7 +133,8 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                     source: ImageSource.camera,
                   );
                   if (image != null) {
-                    final savedRelativePath = await _imageStorageService.saveImage(File(image.path), 'purchases');
+                    final savedRelativePath = await _imageStorageService
+                        .saveImage(File(image.path), 'purchases');
                     setState(() {
                       _imagePath = savedRelativePath;
                     });
@@ -309,7 +311,10 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             CustomTextField(
               label: AppStrings.model,
               controller: _modelController,
-              validator: (value) => ValidationService.validateRequired(value, AppStrings.enterModel),
+              validator: (value) => ValidationService.validateRequired(
+                value,
+                AppStrings.enterModel,
+              ),
             ),
             CustomTextField(
               label: AppStrings.quantity,

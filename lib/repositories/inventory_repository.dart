@@ -2,104 +2,103 @@ import 'package:gomaa_management/core/errors/app_exception.dart';
 import 'package:gomaa_management/core/logging/app_logger.dart';
 import 'package:gomaa_management/database/database_constants.dart';
 import 'package:gomaa_management/database/database_service.dart';
-import 'package:gomaa_management/models/customer_model.dart';
-import 'package:gomaa_management/repositories/interfaces/i_customer_repository.dart';
+import 'package:gomaa_management/models/inventory_model.dart';
+import 'package:gomaa_management/repositories/interfaces/i_inventory_repository.dart';
 import 'package:gomaa_management/repositories/interfaces/i_audit_log_repository.dart';
 import 'package:gomaa_management/repositories/audit_log_repository.dart';
 
-class CustomerRepository implements ICustomerRepository {
+class InventoryRepository implements IInventoryRepository {
   final DatabaseService _dbService;
   final IAuditLogRepository _auditLogRepository;
-  static const _tag = 'CustomerRepository';
+  static const _tag = 'InventoryRepository';
 
-  CustomerRepository({
+  InventoryRepository({
     DatabaseService? dbService,
     IAuditLogRepository? auditLogRepository,
   })  : _dbService = dbService ?? DatabaseService.instance,
         _auditLogRepository = auditLogRepository ?? AuditLogRepository();
 
   @override
-  Future<List<CustomerModel>> getAll() async {
-    try {
-      final db = await _dbService.database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        TableNames.customers,
-        orderBy: '${CustomerColumns.name} ASC',
-      );
-      return maps.map(CustomerModel.fromMap).toList();
-    } catch (e) {
-      AppLogger.instance.error('Failed to get all customers',
-          tag: _tag, exception: e);
-      throw AppDatabaseException(technicalDetail: e.toString());
-    }
-  }
-
-  @override
-  Future<CustomerModel?> getById(int id) async {
+  Future<List<InventoryModel>> getAll() async {
     try {
       final db = await _dbService.database;
       final maps = await db.query(
-        TableNames.customers,
-        where: '${CustomerColumns.id} = ?',
-        whereArgs: [id],
+        TableNames.inventory,
+        orderBy: '${InventoryColumns.name} ASC',
       );
-      if (maps.isNotEmpty) return CustomerModel.fromMap(maps.first);
-      return null;
+      return maps.map(InventoryModel.fromMap).toList();
     } catch (e) {
-      AppLogger.instance.error('Failed to get customer by id: $id',
+      AppLogger.instance.error('Failed to get all inventory items',
           tag: _tag, exception: e);
       throw AppDatabaseException(technicalDetail: e.toString());
     }
   }
 
   @override
-  Future<int> create(CustomerModel customer) async {
+  Future<InventoryModel?> getById(int id) async {
+    try {
+      final db = await _dbService.database;
+      final maps = await db.query(
+        TableNames.inventory,
+        where: '${InventoryColumns.id} = ?',
+        whereArgs: [id],
+      );
+      return maps.isNotEmpty ? InventoryModel.fromMap(maps.first) : null;
+    } catch (e) {
+      AppLogger.instance.error('Failed to get inventory item $id',
+          tag: _tag, exception: e);
+      throw AppDatabaseException(technicalDetail: e.toString());
+    }
+  }
+
+  @override
+  Future<int> create(InventoryModel item) async {
     try {
       final db = await _dbService.database;
       int id = -1;
       await db.transaction((txn) async {
-        id = await txn.insert(TableNames.customers, customer.toMap());
+        id = await txn.insert(TableNames.inventory, item.toMap());
       });
       if (id != -1) {
         await _auditLogRepository.log(
           operation: AuditOperation.add,
-          entityType: AuditEntityType.customer,
+          entityType: AuditEntityType.inventory,
           entityId: id,
-          description: 'إضافة العميل: ${customer.name}',
+          description: 'إضافة للمخزون: ${item.name}',
         );
       }
       return id;
     } catch (e) {
-      AppLogger.instance.error('Failed to create customer',
+      AppLogger.instance.error('Failed to create inventory item',
           tag: _tag, exception: e);
       throw AppDatabaseException(technicalDetail: e.toString());
     }
   }
 
   @override
-  Future<int> update(CustomerModel customer) async {
+  Future<int> update(InventoryModel item) async {
     try {
       final db = await _dbService.database;
       int count = 0;
       await db.transaction((txn) async {
         count = await txn.update(
-          TableNames.customers,
-          customer.toMap(),
-          where: '${CustomerColumns.id} = ?',
-          whereArgs: [customer.id],
+          TableNames.inventory,
+          item.toMap(),
+          where: '${InventoryColumns.id} = ?',
+          whereArgs: [item.id],
         );
       });
-      if (count > 0 && customer.id != null) {
+      if (count > 0 && item.id != null) {
         await _auditLogRepository.log(
           operation: AuditOperation.edit,
-          entityType: AuditEntityType.customer,
-          entityId: customer.id,
-          description: 'تعديل بيانات العميل: ${customer.name}',
+          entityType: AuditEntityType.inventory,
+          entityId: item.id,
+          description: 'تعديل عنصر المخزون: ${item.name}',
         );
       }
       return count;
     } catch (e) {
-      AppLogger.instance.error('Failed to update customer: ${customer.id}',
+      AppLogger.instance.error('Failed to update inventory item: ${item.id}',
           tag: _tag, exception: e);
       throw AppDatabaseException(technicalDetail: e.toString());
     }
@@ -108,47 +107,62 @@ class CustomerRepository implements ICustomerRepository {
   @override
   Future<int> delete(int id) async {
     try {
-      final customer = await getById(id);
-      if (customer == null) return 0;
+      final item = await getById(id);
+      if (item == null) return 0;
       final db = await _dbService.database;
       int count = 0;
       await db.transaction((txn) async {
         count = await txn.delete(
-          TableNames.customers,
-          where: '${CustomerColumns.id} = ?',
+          TableNames.inventory,
+          where: '${InventoryColumns.id} = ?',
           whereArgs: [id],
         );
       });
       if (count > 0) {
         await _auditLogRepository.log(
           operation: AuditOperation.delete,
-          entityType: AuditEntityType.customer,
+          entityType: AuditEntityType.inventory,
           entityId: id,
-          description: 'حذف العميل: ${customer.name}',
+          description: 'حذف من المخزون: ${item.name}',
         );
       }
       return count;
     } catch (e) {
-      AppLogger.instance.error('Failed to delete customer: $id',
+      AppLogger.instance.error('Failed to delete inventory item: $id',
           tag: _tag, exception: e);
       throw AppDatabaseException(technicalDetail: e.toString());
     }
   }
 
   @override
-  Future<List<CustomerModel>> search(String query) async {
+  Future<List<InventoryModel>> search(String query) async {
     try {
       final db = await _dbService.database;
       final maps = await db.query(
-        TableNames.customers,
+        TableNames.inventory,
         where:
-            '${CustomerColumns.name} LIKE ? OR ${CustomerColumns.mobilePhone} LIKE ? OR ${CustomerColumns.companyName} LIKE ?',
+            '${InventoryColumns.name} LIKE ? OR ${InventoryColumns.model} LIKE ? OR ${InventoryColumns.category} LIKE ?',
         whereArgs: ['%$query%', '%$query%', '%$query%'],
-        orderBy: '${CustomerColumns.name} ASC',
+        orderBy: '${InventoryColumns.name} ASC',
       );
-      return maps.map(CustomerModel.fromMap).toList();
+      return maps.map(InventoryModel.fromMap).toList();
     } catch (e) {
-      AppLogger.instance.error('Failed to search customers: $query',
+      AppLogger.instance.error('Failed to search inventory: $query',
+          tag: _tag, exception: e);
+      throw AppDatabaseException(technicalDetail: e.toString());
+    }
+  }
+
+  @override
+  Future<void> adjustQuantity(int id, int delta) async {
+    try {
+      final db = await _dbService.database;
+      await db.rawUpdate(
+        'UPDATE ${TableNames.inventory} SET ${InventoryColumns.quantity} = ${InventoryColumns.quantity} + ? WHERE ${InventoryColumns.id} = ?',
+        [delta, id],
+      );
+    } catch (e) {
+      AppLogger.instance.error('Failed to adjust inventory quantity for $id',
           tag: _tag, exception: e);
       throw AppDatabaseException(technicalDetail: e.toString());
     }

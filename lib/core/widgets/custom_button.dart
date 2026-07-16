@@ -1,28 +1,35 @@
 import 'package:flutter/material.dart';
 
 class CustomButton extends StatelessWidget {
-  final String text;
+  final String? label;
+  final String? text;
   final VoidCallback onPressed;
   final bool isLoading;
   final Color? backgroundColor;
+  final IconData? icon;
 
   const CustomButton({
     super.key,
-    required this.text,
+    this.label,
+    this.text,
     required this.onPressed,
     this.isLoading = false,
     this.backgroundColor,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
+    final themeBg = backgroundColor ?? Theme.of(context).primaryColor;
+    final buttonText = text ?? label ?? '';
+
     return SizedBox(
       width: double.infinity,
       height: 56,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? Theme.of(context).primaryColor,
+          backgroundColor: themeBg,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -38,13 +45,22 @@ class CustomButton extends StatelessWidget {
                   strokeWidth: 2,
                 ),
               )
-            : Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Arial',
-                ),
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    buttonText,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                  if (icon != null) ...[
+                    const SizedBox(width: 8),
+                    Icon(icon, size: 20),
+                  ],
+                ],
               ),
       ),
     );

@@ -18,7 +18,7 @@ class MigrationManager {
   /// The current schema version. Increment this every time a new migration
   /// is added. [DatabaseService] uses this as the `version` argument to
   /// [openDatabase].
-  static const int currentVersion = 8;
+  static const int currentVersion = 9;
 
   static const _tag = 'MigrationManager';
 
@@ -32,6 +32,7 @@ class MigrationManager {
     _Migration(version: 6, up: _v6AddImagePathToPurchases),
     _Migration(version: 7, up: _v7AddAllNewTablesAndIndexes),
     _Migration(version: 8, up: _v8AddUsersTable),
+    _Migration(version: 9, up: _v9RefactorSchema),
   ];
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -398,6 +399,100 @@ class MigrationManager {
       INSERT OR IGNORE INTO users (username, password)
       VALUES ('admin', 'admin')
     ''');
+  }
+
+  // ── v9 ────────────────────────────────────────────────────────────────────
+
+  /// Restructures the database schema:
+  /// - Rebuilds [customers] table with company/address fields, removing old financial columns.
+  /// - Creates [sales_invoices] table linked to customers.
+  /// - Creates [inventory] table replacing the old [equipment] table.
+  static Future<void> _v9RefactorSchema(Database db) async {
+    // 1. Rebuild customers table (keep only contact/company info)
+    await db.execute('''
+      CREATE TABLE customers_v9 (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        name        TEXT NOT NULL,
+        mobilePhone TEXT NOT NULL,
+        companyName TEXT,
+        address     TEXT,
+        notes       TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+    // Copy existing customer names and phones — discard old financial columns
+    await db.execute('''
+      INSERT INTO customers_v9 (id, name, mobilePhone, notes)
+      SELECT id, name, mobilePhone, COALESCE(notes, '') FROM customers
+    ''');
+    await db.execute('DROP TABLE customers');
+    await db.execute('ALTER TABLE customers_v9 RENAME TO customers');
+
+    // 2. Create sales_invoices table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sales_invoices (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        customerId       INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        itemName         TEXT    NOT NULL,
+        model            TEXT    NOT NULL DEFAULT '',
+        quantity         INTEGER NOT NULL DEFAULT 1,
+        price            REAL    NOT NULL,
+        totalAmount      REAL    NOT NULL,
+        paidAmount       REAL    NOT NULL,
+        remainingBalance REAL    NOT NULL,
+        date             TEXT    NOT NULL,
+        notes            TEXT    NOT NULL DEFAULT ''
+      )
+    ''');
+
+    // 3. Create inventory table (replaces equipment)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS inventory (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        name          TEXT    NOT NULL,
+        model         TEXT    NOT NULL DEFAULT '',
+        quantity      INTEGER NOT NULL DEFAULT 0,
+        category      TEXT    NOT NULL DEFAULT '',
+        purchasePrice REAL    NOT NULL DEFAULT 0,
+        sellingPrice  REAL    NOT NULL DEFAULT 0,
+        location      TEXT,
+        notes         TEXT    NOT NULL DEFAULT ''
+      )
+    ''');
+
+    // Migrate old equipment records to inventory (quantity defaults to 0)
+    final equipInfo = await db.rawQuery('PRAGMA table_info(equipment)');
+    if (equipInfo.isNotEmpty) {
+      await db.execute('''
+        INSERT INTO inventory (id, name, model, category, purchasePrice, notes)
+        SELECT id, name, model, COALESCE(category, ''), COALESCE(purchasePrice, 0), COALESCE(notes, '')
+        FROM equipment
+      ''');
+      await db.execute('DROP TABLE IF EXISTS equipment');
+    }
+
+    // 4. Rebuild customer index
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(mobilePhone)',
+    );
+
+    // 5. Sales invoices indexes
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sales_customer ON sales_invoices(customerId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sales_date ON sales_invoices(date)',
+    );
+
+    // 6. Inventory indexes
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_inventory_name ON inventory(name)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_inventory_category ON inventory(category)',
+    );
   }
 }
 

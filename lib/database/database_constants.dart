@@ -14,7 +14,8 @@ abstract final class TableNames {
   static const String customers = 'customers';
   static const String purchases = 'purchases';
   static const String fixes = 'fixes';
-  static const String equipment = 'equipment';
+  static const String inventory = 'inventory';
+  static const String salesInvoices = 'sales_invoices';
   static const String maintenanceRecords = 'maintenance_records';
   static const String maintenanceSchedule = 'maintenance_schedule';
   static const String notes = 'notes';
@@ -30,13 +31,8 @@ abstract final class CustomerColumns {
   static const String id = 'id';
   static const String name = 'name';
   static const String mobilePhone = 'mobilePhone';
-  static const String transactionType = 'transactionType';
-  static const String purchases = 'purchases';
-  static const String model = 'model';
-  static const String amount = 'amount';
-  static const String paidAmount = 'paidAmount';
-  static const String remainingBalance = 'remainingBalance';
-  static const String date = 'date';
+  static const String companyName = 'companyName';
+  static const String address = 'address';
   static const String notes = 'notes';
 }
 
@@ -79,16 +75,33 @@ abstract final class FixColumns {
 // Column Names — Equipment
 // ─────────────────────────────────────────────────────────────────────────────
 
-abstract final class EquipmentColumns {
+abstract final class InventoryColumns {
   static const String id = 'id';
   static const String name = 'name';
   static const String model = 'model';
-  static const String serialNumber = 'serialNumber';
+  static const String quantity = 'quantity';
   static const String category = 'category';
-  static const String purchaseDate = 'purchaseDate';
   static const String purchasePrice = 'purchasePrice';
-  static const String currentStatus = 'currentStatus';
+  static const String sellingPrice = 'sellingPrice';
   static const String location = 'location';
+  static const String notes = 'notes';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Column Names — Sales Invoices
+// ─────────────────────────────────────────────────────────────────────────────
+
+abstract final class SalesInvoiceColumns {
+  static const String id = 'id';
+  static const String customerId = 'customerId';
+  static const String itemName = 'itemName';
+  static const String model = 'model';
+  static const String quantity = 'quantity';
+  static const String price = 'price';
+  static const String totalAmount = 'totalAmount';
+  static const String paidAmount = 'paidAmount';
+  static const String remainingBalance = 'remainingBalance';
+  static const String date = 'date';
   static const String notes = 'notes';
 }
 
@@ -227,7 +240,8 @@ abstract final class AuditEntityType {
   static const String customer = 'customer';
   static const String purchase = 'purchase';
   static const String fix = 'fix';
-  static const String equipment = 'equipment';
+  static const String inventory = 'inventory';
+  static const String salesInvoice = 'sales_invoice';
   static const String maintenanceRecord = 'maintenance_record';
   static const String system = 'system';
 }

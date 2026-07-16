@@ -3,7 +3,8 @@ import 'package:gomaa_management/core/resources/app_colors.dart';
 import 'package:gomaa_management/screens/customers/customers_screen.dart';
 import 'package:gomaa_management/screens/purchases/purchases_screen.dart';
 import 'package:gomaa_management/screens/fixes/fixes_screen.dart';
-import 'package:gomaa_management/screens/equipment/equipment_screen.dart';
+import 'package:gomaa_management/screens/inventory/inventory_screen.dart';
+import 'package:gomaa_management/screens/sales_invoices/sales_invoices_screen.dart';
 import 'package:gomaa_management/screens/maintenance/maintenance_screen.dart';
 import 'package:gomaa_management/screens/search/global_search_screen.dart';
 import 'package:gomaa_management/screens/settings/settings_screen.dart';
@@ -21,9 +22,10 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final List<Widget> _screens = [
     const CustomersScreen(),
+    const SalesInvoicesScreen(),
     const PurchasesScreen(),
     const FixesScreen(),
-    const EquipmentScreen(),
+    const InventoryScreen(),
     const MaintenanceScreen(),
     const GlobalSearchScreen(),
     const SettingsScreen(),
@@ -36,6 +38,11 @@ class _MainNavigationState extends State<MainNavigation> {
       'title': 'العملاء',
     },
     {
+      'icon': Icons.receipt_long_outlined,
+      'activeIcon': Icons.receipt_long,
+      'title': 'الفواتير',
+    },
+    {
       'icon': Icons.shopping_cart_outlined,
       'activeIcon': Icons.shopping_cart,
       'title': 'المشتريات',
@@ -46,9 +53,9 @@ class _MainNavigationState extends State<MainNavigation> {
       'title': 'صيانة عملاء',
     },
     {
-      'icon': Icons.precision_manufacturing_outlined,
-      'activeIcon': Icons.precision_manufacturing,
-      'title': 'الأجهزة',
+      'icon': Icons.inventory_2_outlined,
+      'activeIcon': Icons.inventory_2,
+      'title': 'المخزون',
     },
     {
       'icon': Icons.handyman_outlined,
@@ -107,26 +114,33 @@ class _MainNavigationState extends State<MainNavigation> {
                         : MainAxisAlignment.end,
                     children: [
                       if (!_isCollapsed) ...[
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              'جمعة للإستيراد والتصدير ',
-                              style: TextStyle(
-                                fontFamily: 'Cairo',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                        const Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'جمعة للإستيراد والتصدير',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'لوحة التحكم',
-                              style: TextStyle(
-                                fontFamily: 'Cairo',
-                                color: AppColors.darkGrey,
-                                fontSize: 10,
+                              Text(
+                                'لوحة التحكم',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  color: AppColors.darkGrey,
+                                  fontSize: 10,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         const SizedBox(width: 12),
                       ],
@@ -146,7 +160,7 @@ class _MainNavigationState extends State<MainNavigation> {
                   ),
                 ),
                 const Divider(height: 1, thickness: 1),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 // Navigation Items
                 Expanded(
@@ -158,7 +172,7 @@ class _MainNavigationState extends State<MainNavigation> {
                       final isSelected = _selectedIndex == index;
 
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
+                        padding: const EdgeInsets.only(bottom: 6.0),
                         child: InkWell(
                           onTap: () {
                             setState(() {
@@ -180,9 +194,8 @@ class _MainNavigationState extends State<MainNavigation> {
                               boxShadow: isSelected
                                   ? [
                                       BoxShadow(
-                                        color: AppColors.primary.withValues(
-                                          alpha: 0.25,
-                                        ),
+                                        color: AppColors.primary
+                                            .withValues(alpha: 0.25),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       ),
@@ -192,26 +205,28 @@ class _MainNavigationState extends State<MainNavigation> {
                             child: Row(
                               mainAxisAlignment: _isCollapsed
                                   ? MainAxisAlignment.center
-                                  : MainAxisAlignment.end,
+                                  : MainAxisAlignment.spaceBetween,
                               children: [
-                                if (!_isCollapsed) ...[
-                                  Text(
-                                    item['title'],
-                                    style: TextStyle(
-                                      fontFamily: 'Cairo',
-                                      fontSize: 13,
-                                      fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      color: isSelected
-                                          ? AppColors.white
-                                          : (isDark
+                                if (!_isCollapsed)
+                                  Flexible(
+                                    child: Text(
+                                      item['title'],
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                      style: TextStyle(
+                                        fontFamily: 'Cairo',
+                                        fontSize: 13,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                        color: isSelected
+                                            ? AppColors.white
+                                            : (isDark
                                                 ? AppColors.lightGrey
                                                 : AppColors.secondary),
+                                      ),
                                     ),
                                   ),
-                                  const Spacer(),
-                                ],
                                 Icon(
                                   isSelected
                                       ? item['activeIcon']
@@ -219,8 +234,8 @@ class _MainNavigationState extends State<MainNavigation> {
                                   color: isSelected
                                       ? AppColors.white
                                       : (isDark
-                                            ? AppColors.lightGrey
-                                            : AppColors.primary),
+                                          ? AppColors.lightGrey
+                                          : AppColors.primary),
                                   size: 22,
                                 ),
                               ],

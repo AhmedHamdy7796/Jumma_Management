@@ -164,7 +164,10 @@ class _FixFormScreenState extends State<FixFormScreen> {
             CustomTextField(
               label: AppStrings.model,
               controller: _modelController,
-              validator: (value) => ValidationService.validateRequired(value, AppStrings.enterModel),
+              validator: (value) => ValidationService.validateRequired(
+                value,
+                AppStrings.enterModel,
+              ),
             ),
             CustomTextField(
               label: AppStrings.dryer,
@@ -180,7 +183,10 @@ class _FixFormScreenState extends State<FixFormScreen> {
               label: AppStrings.issue,
               controller: _issueController,
               maxLines: 2,
-              validator: (value) => ValidationService.validateRequired(value, AppStrings.enterIssue),
+              validator: (value) => ValidationService.validateRequired(
+                value,
+                AppStrings.enterIssue,
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),

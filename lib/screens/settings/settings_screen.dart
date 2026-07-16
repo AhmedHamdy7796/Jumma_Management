@@ -8,6 +8,7 @@ import 'package:gomaa_management/core/resources/app_colors.dart';
 import 'package:gomaa_management/core/widgets/custom_text_field.dart';
 import 'package:gomaa_management/core/widgets/custom_button.dart';
 import 'package:gomaa_management/screens/audit_log/audit_log_screen.dart';
+import 'package:gomaa_management/screens/settings/users_management_tab.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -22,11 +23,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   final _companyPhoneController = TextEditingController();
   final _companyAddressController = TextEditingController();
   final _currencyController = TextEditingController();
+  bool _controllersInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     context.read<SettingsCubit>().loadSettings();
   }
 
@@ -123,6 +125,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             tabs: const [
               Tab(text: 'إعدادات الشركة'),
               Tab(text: 'النسخ الاحتياطي والأمان'),
+              Tab(text: 'إدارة المستخدمين'),
             ],
           ),
         ),
@@ -135,10 +138,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             Map<String, String> settings = {};
             if (state is SettingsLoaded) {
               settings = state.settings;
-              _companyNameController.text = settings[SettingsKeys.companyName] ?? '';
-              _companyPhoneController.text = settings[SettingsKeys.companyPhone] ?? '';
-              _companyAddressController.text = settings[SettingsKeys.companyAddress] ?? '';
-              _currencyController.text = settings[SettingsKeys.currencySymbol] ?? 'ج.م';
+              // Populate controllers only once to avoid overwriting user edits
+              if (!_controllersInitialized) {
+                _companyNameController.text = settings[SettingsKeys.companyName] ?? '';
+                _companyPhoneController.text = settings[SettingsKeys.companyPhone] ?? '';
+                _companyAddressController.text = settings[SettingsKeys.companyAddress] ?? '';
+                _currencyController.text = settings[SettingsKeys.currencySymbol] ?? 'ج.م';
+                _controllersInitialized = true;
+              }
             }
 
             return TabBarView(
@@ -146,6 +153,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               children: [
                 _buildCompanyTab(settings),
                 _buildBackupTab(settings),
+                const UsersManagementTab(),
               ],
             );
           },
@@ -159,8 +167,11 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       padding: const EdgeInsets.all(16),
       children: [
         CustomTextField(label: 'اسم الشركة', controller: _companyNameController),
+        const SizedBox(height: 12),
         CustomTextField(label: 'رقم هاتف الشركة', controller: _companyPhoneController),
+        const SizedBox(height: 12),
         CustomTextField(label: 'عنوان الشركة', controller: _companyAddressController),
+        const SizedBox(height: 12),
         CustomTextField(label: 'رمز العملة المستخدمة في التطبيق', controller: _currencyController),
         const SizedBox(height: 16),
         const Text(
@@ -196,6 +207,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               SettingsKeys.currencySymbol: _currencyController.text,
               SettingsKeys.language: settings[SettingsKeys.language] ?? 'ar',
             });
+            // Reset flag so restored settings reload into controllers
+            _controllersInitialized = false;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('تم حفظ الإعدادات بنجاح')),
             );

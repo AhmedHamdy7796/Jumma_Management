@@ -8,11 +8,11 @@ import 'package:gomaa_management/database/database_constants.dart';
 import 'package:gomaa_management/screens/customers/customer_form_screen.dart';
 import 'package:gomaa_management/screens/purchases/purchase_form_screen.dart';
 import 'package:gomaa_management/screens/fixes/fix_form_screen.dart';
-import 'package:gomaa_management/screens/equipment/equipment_form_screen.dart';
+import 'package:gomaa_management/screens/inventory/inventory_form_screen.dart';
 import 'package:gomaa_management/repositories/customer_repository.dart';
 import 'package:gomaa_management/repositories/purchase_repository.dart';
 import 'package:gomaa_management/repositories/fix_repository.dart';
-import 'package:gomaa_management/repositories/equipment_repository.dart';
+import 'package:gomaa_management/repositories/inventory_repository.dart';
 
 class GlobalSearchScreen extends StatefulWidget {
   const GlobalSearchScreen({super.key});
@@ -43,8 +43,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       final fx = await FixRepository().getById(result.entityId);
       targetScreen = FixFormScreen(fix: fx);
     } else {
-      final equip = await EquipmentRepository().getById(result.entityId);
-      targetScreen = EquipmentFormScreen(equipment: equip);
+      final item = await InventoryRepository().getById(result.entityId);
+      targetScreen = InventoryFormScreen(item: item);
     }
 
     if (mounted) {
@@ -60,7 +60,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       appBar: AppBar(
         title: const Text(
           'البحث الشامل في النظام',
-          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Arial'),
+          style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
         ),
         centerTitle: true,
         elevation: 0,
@@ -76,14 +76,16 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               textDirection: TextDirection.rtl,
               textAlign: TextAlign.right,
               decoration: InputDecoration(
-                hintText: 'ابحث عن اسم عميل، ماكينة، مشكلة صيانة، رقم تسلسلي...',
-                hintStyle: const TextStyle(fontFamily: 'Arial', fontSize: 14),
-                prefixIcon: const Icon(Icons.search),
+                hintText: 'ابحث عن اسم عميل، صنف، صيانة، إلخ...',
+                hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                prefixIcon: const Icon(Icons.search, color: AppColors.primaryAccent),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 filled: true,
-                fillColor: Colors.grey.shade100,
+                fillColor: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.cardDark
+                    : Colors.grey.shade100,
               ),
               onChanged: (value) {
                 context.read<SearchCubit>().performSearch(value);
@@ -129,8 +131,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                       case AuditEntityType.fix:
                         arabType = 'صيانة خارجية';
                         break;
-                      case AuditEntityType.equipment:
-                        arabType = 'جهاز شركة';
+                      case AuditEntityType.inventory:
+                        arabType = 'صنف بالمخزون';
                         break;
                     }
 
@@ -142,12 +144,12 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                         title: Text(
                           res.title,
                           textAlign: TextAlign.right,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Arial'),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
                         ),
                         subtitle: Text(
                           '${res.subtitle} | $arabType',
                           textAlign: TextAlign.right,
-                          style: const TextStyle(fontFamily: 'Arial'),
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
                         ),
                         onTap: () => _navigateToDetail(context, res),
                       ),

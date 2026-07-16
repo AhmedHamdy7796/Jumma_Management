@@ -155,16 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(fontSize: 18, fontFamily: 'Cairo'),
                             ),
                     ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, Routes.signup);
-                      },
-                      child: const Text(
-                        AppStrings.noAccount,
-                        style: TextStyle(fontFamily: 'Cairo'),
-                      ),
-                    ),
+
                   ],
                 ),
               ),
