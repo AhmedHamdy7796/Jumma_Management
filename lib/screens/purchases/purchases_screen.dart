@@ -301,98 +301,62 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                           Text(
                             purchase.machineName,
                             style: const TextStyle(
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'Cairo',
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            purchase.model,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.darkGrey,
-                              fontFamily: 'Cairo',
+                          if (purchase.model.isNotEmpty)
+                            Text(
+                              'موديل: ${purchase.model}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.primaryAccent,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Cairo',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          else if (purchase.quantity > 1)
+                            Text(
+                              'الكمية: ${purchase.quantity}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.primaryAccent,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Cairo',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
                         ],
                       ),
                     ),
-                    // Delete button
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
-                      splashRadius: 20,
-                      onPressed: () => ConfirmDeleteDialog.show(
-                        context,
-                        title: AppStrings.confirmDeleteTitle,
-                        content: '${AppStrings.confirmDeleteMessage} ${purchase.machineName}؟',
-                        onDelete: () {
-                          context.read<PurchaseCubit>().deletePurchase(purchase.id!);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(AppStrings.deleteSuccess, style: TextStyle(fontFamily: 'Cairo')),
-                            ),
-                          );
-                        },
+                    Text(
+                      DateFormatter.toDisplay(purchase.date),
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        color: AppColors.darkGrey,
                       ),
                     ),
                   ],
                 ),
               ),
               const Divider(height: 1, thickness: 1),
-              // ── Details ─────────────────────────────────────────
+              // ── Amount chips ─────────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                child: Column(
-                  children: [
-                    InfoRow(
-                      icon: Icons.production_quantity_limits,
-                      text: '${AppStrings.quantity}: ${purchase.quantity}',
-                    ),
-                    const SizedBox(height: 6),
-                    InfoRow(
-                      icon: Icons.attach_money,
-                      text: '${AppStrings.price}: ${purchase.price.toStringAsFixed(2)}',
-                    ),
-                    const SizedBox(height: 6),
-                    InfoRow(
-                      icon: Icons.calendar_today_outlined,
-                      text: DateFormatter.toDisplay(purchase.date),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1, thickness: 1),
-              // ── Amount row — same style as invoice card ─────────────────
-              IntrinsicHeight(
+                padding: const EdgeInsets.all(12),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    Expanded(
-                      child: _amountColumn(
-                        '${purchase.totalAmount.toStringAsFixed(0)} ج.م',
-                        'الإجمالي',
-                        AppColors.primaryAccent,
-                      ),
-                    ),
-                    VerticalDivider(width: 1, thickness: 1, color: Colors.grey.shade200),
-                    Expanded(
-                      child: _amountColumn(
-                        '${purchase.paidAmount.toStringAsFixed(0)} ج.م',
-                        'مدفوع',
-                        AppColors.success,
-                      ),
-                    ),
-                    VerticalDivider(width: 1, thickness: 1, color: Colors.grey.shade200),
-                    Expanded(
-                      child: _amountColumn(
-                        '${purchase.remainingBalance.toStringAsFixed(0)} ج.م',
-                        'الباقي',
-                        purchase.remainingBalance > 0 ? AppColors.error : AppColors.success,
-                      ),
-                    ),
+                    _amountColumn('${purchase.totalAmount.toStringAsFixed(0)} ج.م', 'الإجمالي', AppColors.primaryAccent),
+                    _amountColumn('${purchase.paidAmount.toStringAsFixed(0)} ج.م', 'مدفوع', AppColors.success),
+                    _amountColumn('${purchase.remainingBalance.toStringAsFixed(0)} ج.م', 'متبقي',
+                        purchase.remainingBalance > 0 ? AppColors.error : AppColors.success),
                   ],
                 ),
               ),
@@ -403,31 +367,17 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
     );
   }
   Widget _amountColumn(String value, String label, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            value,
+    return Column(
+      children: [
+        Text(value,
             style: TextStyle(
-              fontFamily: 'Cairo',
-              fontWeight: FontWeight.bold,
-              color: color,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 10,
-              color: AppColors.darkGrey,
-            ),
-          ),
-        ],
-      ),
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                color: color,
+                fontSize: 12)),
+        Text(label,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 10)),
+      ],
     );
   }
 }

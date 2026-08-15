@@ -114,6 +114,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
+                  color: Theme.of(context).brightness == Brightness.dark ? AppColors.cardDark : AppColors.white,
                   border: Border.all(
                     color: isCompleted
                         ? AppColors.success.withValues(alpha: 0.3)
@@ -152,14 +153,19 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
                                   'رقم المعدة: #${item.equipmentId}',
                                   style: const TextStyle(
                                     fontFamily: 'Cairo',
-                                    fontSize: 13,
-                                    color: AppColors.darkGrey,
+                                    fontSize: 12,
+                                    color: AppColors.primaryAccent,
+                                    fontWeight: FontWeight.w600,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -250,7 +256,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
+                  color: Theme.of(context).brightness == Brightness.dark ? AppColors.cardDark : AppColors.white,
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.darkGrey.withValues(alpha: 0.2)
+                        : Colors.grey.shade200,
+                  ),
                 ),
                 child: Column(
                   children: [
@@ -286,9 +297,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                                   'رقم المعدة: #${record.equipmentId}',
                                   style: const TextStyle(
                                     fontFamily: 'Cairo',
-                                    fontSize: 13,
-                                    color: AppColors.darkGrey,
+                                    fontSize: 12,
+                                    color: AppColors.primaryAccent,
+                                    fontWeight: FontWeight.w600,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),

@@ -203,56 +203,43 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          if (item.model.isNotEmpty)
-                            Text(
-                              item.model,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.darkGrey,
-                                fontFamily: 'Cairo',
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
-                    ),
-                    // Quantity badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isLowStock
-                            ? AppColors.error.withValues(alpha: 0.1)
-                            : AppColors.success.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isLowStock
-                              ? AppColors.error.withValues(alpha: 0.3)
-                              : AppColors.success.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isLowStock ? Icons.warning_amber_outlined : Icons.check_circle_outline,
-                            size: 14,
-                            color: isLowStock ? AppColors.error : AppColors.success,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${item.quantity} قطعة',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isLowStock ? AppColors.error : AppColors.success,
-                            ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              if (item.model.isNotEmpty)
+                                Flexible(
+                                  child: Text(
+                                    'موديل: ${item.model}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.darkGrey,
+                                      fontFamily: 'Cairo',
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              if (item.model.isNotEmpty && item.category.isNotEmpty)
+                                const Text(' • ', style: TextStyle(color: AppColors.darkGrey, fontSize: 12)),
+                              if (item.category.isNotEmpty)
+                                Flexible(
+                                  child: Text(
+                                    item.category,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.primaryAccent,
+                                      fontFamily: 'Cairo',
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 4),
                     IconButton(
                       icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
                       splashRadius: 20,
@@ -267,50 +254,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
               ),
               const Divider(height: 1, thickness: 1),
-              // ── Prices + Category ───────────────────────────────
+              // ── Details Footer ───────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                padding: const EdgeInsets.all(12),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    // Purchase price
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('سعر الشراء', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppColors.darkGrey)),
-                          Text(
-                            '${item.purchasePrice.toStringAsFixed(2)} ج.م',
-                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.darkGrey),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Selling price
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('سعر البيع', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppColors.darkGrey)),
-                          Text(
-                            '${item.sellingPrice.toStringAsFixed(2)} ج.م',
-                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.success),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Category
-                    if (item.category.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          item.category,
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppColors.primary),
-                        ),
-                      ),
+                    _infoColumn('${item.purchasePrice.toStringAsFixed(0)} ج.م', 'سعر الشراء', AppColors.darkGrey),
+                    _infoColumn('${item.sellingPrice.toStringAsFixed(0)} ج.م', 'سعر البيع', AppColors.success),
+                    _infoColumn('${item.quantity} قطعة', 'الكمية المتاحة', isLowStock ? AppColors.error : AppColors.primaryAccent),
                   ],
                 ),
               ),
@@ -318,6 +270,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
         ),
       ),
+    );
+  }
+  Widget _infoColumn(String value, String label, Color color) {
+    return Column(
+      children: [
+        Text(value,
+            style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                color: color,
+                fontSize: 12)),
+        Text(label,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 10)),
+      ],
     );
   }
 }
