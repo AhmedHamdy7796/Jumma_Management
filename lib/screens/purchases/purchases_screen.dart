@@ -402,4 +402,32 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
       ),
     );
   }
+  Widget _amountColumn(String value, String label, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.bold,
+              color: color,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 10,
+              color: AppColors.darkGrey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
