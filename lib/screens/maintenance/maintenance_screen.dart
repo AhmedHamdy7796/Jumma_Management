@@ -125,7 +125,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                   children: [
                     // ── Header ───────────────────────────────────
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                      padding: const EdgeInsets.all(14),
                       child: Row(
                         children: [
                           Container(
@@ -199,7 +199,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                     const Divider(height: 1, thickness: 1),
                     // ── Details ──────────────────────────────────
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      padding: const EdgeInsets.all(14),
                       child: Column(
                         children: [
                           InfoRow(icon: Icons.calendar_today, text: 'التاريخ المجدول: ${DateFormatter.toDisplay(item.scheduledDate)}'),
@@ -267,7 +267,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                   children: [
                     // ── Header ───────────────────────────────────
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                      padding: const EdgeInsets.all(14),
                       child: Row(
                         children: [
                           Container(
@@ -325,7 +325,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                     const Divider(height: 1, thickness: 1),
                     // ── Details ──────────────────────────────────
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      padding: const EdgeInsets.all(14),
                       child: Column(
                         children: [
                           InfoRow(icon: Icons.error_outline, text: 'وصف المشكلة: ${record.issueDescription}'),

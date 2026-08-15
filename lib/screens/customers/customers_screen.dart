@@ -187,7 +187,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
             children: [
               // Header row
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(14.0),
                 child: Row(
                   children: [
                     Container(
@@ -260,7 +260,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
               const Divider(height: 1, thickness: 1),
               // Contact details
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(14.0),
                 child: Column(
                   children: [
                     Row(

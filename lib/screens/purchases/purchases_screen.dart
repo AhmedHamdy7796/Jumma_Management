@@ -261,7 +261,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
             children: [
               // ── Header ──────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                padding: const EdgeInsets.all(14),
                 child: Row(
                   children: [
                     // Product image / icon
@@ -349,7 +349,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
               const Divider(height: 1, thickness: 1),
               // ── Amount chips ─────────────────────────────────
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [

@@ -203,7 +203,7 @@ class _SalesInvoicesScreenState extends State<SalesInvoicesScreen> {
             children: [
               // ── Header ─────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                padding: const EdgeInsets.all(14),
                 child: Row(
                   children: [
                     Container(
@@ -269,7 +269,7 @@ class _SalesInvoicesScreenState extends State<SalesInvoicesScreen> {
               const Divider(height: 1, thickness: 1),
               // ── Amount chips ─────────────────────────────────
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [

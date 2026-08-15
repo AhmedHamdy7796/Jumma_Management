@@ -177,7 +177,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             children: [
               // ── Header ─────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                padding: const EdgeInsets.all(14),
                 child: Row(
                   children: [
                     Container(
@@ -256,7 +256,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               const Divider(height: 1, thickness: 1),
               // ── Details Footer ───────────────────────────────
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
