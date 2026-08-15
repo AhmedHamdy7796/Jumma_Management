@@ -110,7 +110,7 @@ class SalesInvoiceDetailScreen extends StatelessWidget {
                 ],
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -129,7 +129,6 @@ class SalesInvoiceDetailScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     invoice.itemName,
-                    textAlign: TextAlign.right,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
@@ -141,7 +140,6 @@ class SalesInvoiceDetailScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       'موديل: ${invoice.model}',
-                      textAlign: TextAlign.right,
                       style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
@@ -177,7 +175,7 @@ class SalesInvoiceDetailScreen extends StatelessWidget {
                 ],
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'الملخص المالي',
@@ -215,25 +213,23 @@ class SalesInvoiceDetailScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        Icon(Icons.notes_outlined,
+                            color: AppColors.primary, size: 18),
+                        SizedBox(width: 6),
                         Text('ملاحظات',
                             style: TextStyle(
                                 fontFamily: 'Cairo',
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primary)),
-                        SizedBox(width: 6),
-                        Icon(Icons.notes_outlined,
-                            color: AppColors.primary, size: 18),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Text(
                       invoice.notes,
-                      textAlign: TextAlign.right,
                       style: const TextStyle(
                           fontFamily: 'Cairo', fontSize: 13),
                     ),
@@ -251,15 +247,14 @@ class SalesInvoiceDetailScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          Icon(icon, color: Colors.white54, size: 16),
+          const SizedBox(width: 8),
           Text(text,
               style: const TextStyle(
                   color: Colors.white70,
                   fontFamily: 'Cairo',
                   fontSize: 13)),
-          const SizedBox(width: 8),
-          Icon(icon, color: Colors.white54, size: 16),
         ],
       ),
     );
@@ -269,6 +264,11 @@ class SalesInvoiceDetailScreen extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        Text(label,
+            style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 14,
+                color: AppColors.darkGrey)),
         Text(
           value,
           style: TextStyle(
@@ -277,11 +277,6 @@ class SalesInvoiceDetailScreen extends StatelessWidget {
               fontSize: 16,
               color: color),
         ),
-        Text(label,
-            style: const TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 14,
-                color: AppColors.darkGrey)),
       ],
     );
   }
