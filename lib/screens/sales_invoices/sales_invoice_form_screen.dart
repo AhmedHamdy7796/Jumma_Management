@@ -180,9 +180,9 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               _sectionHeader('بيانات الصنف', Icons.inventory_2_outlined),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _itemNameController,
                 label: 'اسم الصنف / الجهاز',
@@ -190,7 +190,7 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
                 icon: Icons.precision_manufacturing_outlined,
                 validator: ValidationService.validateRequiredField,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -215,9 +215,9 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               _sectionHeader('بيانات الدفع', Icons.payments_outlined),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _priceController,
                 label: 'السعر (للوحدة)',
@@ -228,7 +228,7 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
                 ),
                 validator: ValidationService.validateRequiredField,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _paidController,
                 label: 'المدفوع',
@@ -264,7 +264,7 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               // Date picker
               InkWell(
                 onTap: _pickDate,
@@ -293,7 +293,7 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _notesController,
                 label: 'ملاحظات (اختياري)',
@@ -301,7 +301,7 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
                 icon: Icons.notes_outlined,
                 maxLines: 2,
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 16),
               CustomButton(
                 label: _isEditing ? 'حفظ التعديلات' : 'إنشاء الفاتورة',
                 icon: _isEditing ? Icons.save_outlined : Icons.receipt_outlined,
@@ -346,7 +346,7 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
             fontSize: 14,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 16),
         Text(label, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11)),
       ],
     );

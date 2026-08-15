@@ -208,7 +208,7 @@ class _FixesScreenState extends State<FixesScreen> {
                         padding: const EdgeInsets.all(16),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
-                          childAspectRatio: 1.35,
+                          mainAxisExtent: 320, // fixed height — no overflow
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
                         ),
@@ -281,10 +281,10 @@ class _FixesScreenState extends State<FixesScreen> {
     }
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
-      shadowColor: AppColors.primary.withValues(alpha: 0.08),
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -296,25 +296,76 @@ class _FixesScreenState extends State<FixesScreen> {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                isDark ? AppColors.cardDark : AppColors.white,
-                isDark ? AppColors.cardDark.withValues(alpha: 0.9) : AppColors.lightGrey.withValues(alpha: 0.4),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+            color: isDark ? AppColors.cardDark : AppColors.white,
+            border: Border.all(
+              color: isDark ? AppColors.darkGrey.withValues(alpha: 0.2) : Colors.grey.shade200,
             ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Header ─────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                child: Row(
                   children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.teal.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.precision_manufacturing_outlined, color: AppColors.teal),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            fix.machineName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'موديل: ${fix.model}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.darkGrey,
+                              fontFamily: 'Cairo',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Status badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(width: 7, height: 7, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+                          const SizedBox(width: 5),
+                          Text(statusText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor, fontFamily: 'Cairo')),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 4),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                      hoverColor: AppColors.error.withValues(alpha: 0.1),
+                      icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                      splashRadius: 20,
                       onPressed: () => ConfirmDeleteDialog.show(
                         context,
                         title: AppStrings.confirmDeleteTitle,
@@ -322,120 +373,56 @@ class _FixesScreenState extends State<FixesScreen> {
                         onDelete: () {
                           context.read<FixCubit>().deleteFix(fix.id!);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                AppStrings.deleteSuccess,
-                                style: TextStyle(fontFamily: 'Cairo'),
-                              ),
-                            ),
+                            const SnackBar(content: Text(AppStrings.deleteSuccess, style: TextStyle(fontFamily: 'Cairo'))),
                           );
                         },
                       ),
                     ),
-                    const Spacer(),
-                    Expanded(
-                      child: Text(
-                        fix.machineName,
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(
-                      Icons.precision_manufacturing_outlined,
-                      color: AppColors.teal,
-                      size: 24,
-                    ),
                   ],
                 ),
-                const Divider(height: 16),
-                InfoRow(icon: Icons.model_training_outlined, text: '${AppStrings.model}: ${fix.model}'),
-                const SizedBox(height: 4),
-                InfoRow(icon: Icons.dry_cleaning_outlined, text: '${AppStrings.dryer}: ${fix.dryerType}'),
-                const SizedBox(height: 4),
-                InfoRow(icon: Icons.production_quantity_limits, text: '${AppStrings.quantity}: ${fix.quantity}'),
-                const SizedBox(height: 4),
-                InfoRow(icon: Icons.error_outline, text: '${AppStrings.issue}: ${fix.issue}'),
-                const SizedBox(height: 4),
-                InfoRow(icon: Icons.calendar_today_outlined, text: DateFormatter.toDisplay(fix.date)),
-                const SizedBox(height: 12),
-                Row(
+              ),
+              const Divider(height: 1, thickness: 1),
+              // ── Details ───────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: Column(
                   children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.purple.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                            color: AppColors.purple.withValues(alpha: 0.25),
-                            width: 1,
-                          ),
-                        ),
-                        child: Center(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              '${AppStrings.cost}: ${fix.cost.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.purple,
-                                fontFamily: 'Cairo',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                            color: statusColor.withValues(alpha: 0.25),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: statusColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                statusText,
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: statusColor,
-                                  fontFamily: 'Cairo',
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    InfoRow(icon: Icons.dry_cleaning_outlined, text: '${AppStrings.dryer}: ${fix.dryerType}'),
+                    const SizedBox(height: 6),
+                    InfoRow(icon: Icons.production_quantity_limits, text: '${AppStrings.quantity}: ${fix.quantity}'),
+                    const SizedBox(height: 6),
+                    InfoRow(icon: Icons.error_outline, text: '${AppStrings.issue}: ${fix.issue}'),
+                    const SizedBox(height: 6),
+                    InfoRow(icon: Icons.calendar_today_outlined, text: DateFormatter.toDisplay(fix.date)),
                   ],
                 ),
-              ],
-            ),
+              ),
+              const Divider(height: 1, thickness: 1),
+              // ── Cost chip ──────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.purple.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.purple.withValues(alpha: 0.25)),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${AppStrings.cost}: ${fix.cost.toStringAsFixed(2)} ${AppStrings.currency}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.purple,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

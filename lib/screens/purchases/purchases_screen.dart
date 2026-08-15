@@ -11,7 +11,6 @@ import 'package:gomaa_management/core/resources/app_colors.dart';
 import 'package:gomaa_management/core/resources/app_strings.dart';
 import 'package:gomaa_management/core/utils/date_formatter.dart';
 import 'package:gomaa_management/core/widgets/info_row.dart';
-import 'package:gomaa_management/core/widgets/amount_chip.dart';
 import 'package:gomaa_management/core/widgets/empty_state.dart';
 import 'package:gomaa_management/core/widgets/confirm_delete_dialog.dart';
 import 'package:gomaa_management/core/widgets/summary_card.dart';
@@ -178,7 +177,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                         padding: const EdgeInsets.all(16),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
-                          childAspectRatio: 1.35, // Gives more vertical space to prevent overflow
+                          mainAxisExtent: 290, // Fixed pixel height — no overflow on resize
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
                         ),
@@ -235,10 +234,10 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
-      shadowColor: AppColors.primary.withValues(alpha: 0.08),
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -252,25 +251,80 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                isDark ? AppColors.cardDark : AppColors.white,
-                isDark ? AppColors.cardDark.withValues(alpha: 0.9) : AppColors.lightGrey.withValues(alpha: 0.4),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+            color: isDark ? AppColors.cardDark : AppColors.white,
+            border: Border.all(
+              color: isDark ? AppColors.darkGrey.withValues(alpha: 0.2) : Colors.grey.shade200,
             ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Header ──────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                child: Row(
                   children: [
+                    // Product image / icon
+                    if (imgFile != null && imgFile.existsSync())
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          imgFile,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 48, height: 48,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.shopping_bag_outlined, color: AppColors.primary),
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        width: 48, height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.shopping_bag_outlined, color: AppColors.primary),
+                      ),
+                    const SizedBox(width: 12),
+                    // Name and model
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            purchase.machineName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            purchase.model,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.darkGrey,
+                              fontFamily: 'Cairo',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Delete button
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                      hoverColor: AppColors.error.withValues(alpha: 0.1),
+                      icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                      splashRadius: 20,
                       onPressed: () => ConfirmDeleteDialog.show(
                         context,
                         title: AppStrings.confirmDeleteTitle,
@@ -279,95 +333,70 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                           context.read<PurchaseCubit>().deletePurchase(purchase.id!);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text(
-                                AppStrings.deleteSuccess,
-                                style: TextStyle(fontFamily: 'Cairo'),
-                              ),
+                              content: Text(AppStrings.deleteSuccess, style: TextStyle(fontFamily: 'Cairo')),
                             ),
                           );
                         },
                       ),
                     ),
-                    const Spacer(),
-                    Expanded(
-                      child: Text(
-                        purchase.machineName,
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    if (imgFile != null && imgFile.existsSync())
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.file(
-                          imgFile,
-                          width: 44,
-                          height: 44,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.shopping_bag_outlined,
-                                color: AppColors.primaryAccent,
-                                size: 26,
-                              ),
-                        ),
-                      )
-                    else
-                      const Icon(Icons.shopping_bag_outlined, color: AppColors.primaryAccent, size: 26),
                   ],
                 ),
-                const Divider(height: 16),
-                InfoRow(icon: Icons.settings_outlined, text: purchase.model),
-                const SizedBox(height: 4),
-                InfoRow(
-                  icon: Icons.production_quantity_limits,
-                  text: '${AppStrings.quantity}: ${purchase.quantity}',
+              ),
+              const Divider(height: 1, thickness: 1),
+              // ── Details ─────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: Column(
+                  children: [
+                    InfoRow(
+                      icon: Icons.production_quantity_limits,
+                      text: '${AppStrings.quantity}: ${purchase.quantity}',
+                    ),
+                    const SizedBox(height: 6),
+                    InfoRow(
+                      icon: Icons.attach_money,
+                      text: '${AppStrings.price}: ${purchase.price.toStringAsFixed(2)}',
+                    ),
+                    const SizedBox(height: 6),
+                    InfoRow(
+                      icon: Icons.calendar_today_outlined,
+                      text: DateFormatter.toDisplay(purchase.date),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                InfoRow(
-                  icon: Icons.attach_money,
-                  text: '${AppStrings.price}: ${purchase.price.toStringAsFixed(2)}',
-                ),
-                const SizedBox(height: 4),
-                InfoRow(
-                  icon: Icons.calendar_today_outlined,
-                  text: DateFormatter.toDisplay(purchase.date),
-                ),
-                const SizedBox(height: 12),
-                Row(
+              ),
+              const Divider(height: 1, thickness: 1),
+              // ── Amount row — same style as invoice card ─────────────────
+              IntrinsicHeight(
+                child: Row(
                   children: [
                     Expanded(
-                      child: AmountChip(
-                        label: AppStrings.total,
-                        amount: purchase.totalAmount,
-                        color: AppColors.primaryAccent,
+                      child: _amountColumn(
+                        '${purchase.totalAmount.toStringAsFixed(0)} ج.م',
+                        'الإجمالي',
+                        AppColors.primaryAccent,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    VerticalDivider(width: 1, thickness: 1, color: Colors.grey.shade200),
                     Expanded(
-                      child: AmountChip(
-                        label: AppStrings.paid,
-                        amount: purchase.paidAmount,
-                        color: AppColors.success,
+                      child: _amountColumn(
+                        '${purchase.paidAmount.toStringAsFixed(0)} ج.م',
+                        'مدفوع',
+                        AppColors.success,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    VerticalDivider(width: 1, thickness: 1, color: Colors.grey.shade200),
                     Expanded(
-                      child: AmountChip(
-                        label: AppStrings.remaining,
-                        amount: purchase.remainingBalance,
-                        color: AppColors.error,
+                      child: _amountColumn(
+                        '${purchase.remainingBalance.toStringAsFixed(0)} ج.م',
+                        'الباقي',
+                        purchase.remainingBalance > 0 ? AppColors.error : AppColors.success,
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

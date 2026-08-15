@@ -3,4 +3,5 @@ abstract interface class IAuthRepository {
   Future<bool> signup(String username, String password);
   Future<List<String>> getAllUsers();
   Future<bool> deleteUser(String username);
+  Future<bool> updatePassword(String username, String newPassword);
 }

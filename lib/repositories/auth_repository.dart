@@ -102,4 +102,25 @@ class AuthRepository implements IAuthRepository {
       throw AppDatabaseException(technicalDetail: e.toString());
     }
   }
+
+  @override
+  Future<bool> updatePassword(String username, String newPassword) async {
+    try {
+      final db = await _dbService.database;
+      final count = await db.update(
+        'users',
+        {'password': newPassword.trim()},
+        where: 'username = ?',
+        whereArgs: [username.trim()],
+      );
+      if (count > 0) {
+        AppLogger.instance.info('Password updated successfully for: $username', tag: _tag);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      AppLogger.instance.error('Error updating password for: $username', tag: _tag, exception: e);
+      throw AppDatabaseException(technicalDetail: e.toString());
+    }
+  }
 }

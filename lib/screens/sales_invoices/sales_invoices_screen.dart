@@ -50,7 +50,7 @@ class _SalesInvoicesScreenState extends State<SalesInvoicesScreen> {
               textDirection: TextDirection.rtl,
               textAlign: TextAlign.right,
               decoration: InputDecoration(
-                hintText: 'ابحث بالصنف أو الموديل...',
+                hintText: 'ابحث باسم العميل أو رقم الفاتورة أو اسم الصنف...',
                 hintStyle:
                     const TextStyle(fontFamily: 'Cairo', fontSize: 13),
                 prefixIcon: const Icon(Icons.search,
@@ -107,7 +107,7 @@ class _SalesInvoicesScreenState extends State<SalesInvoicesScreen> {
                         gridDelegate:
                             SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: count,
-                          childAspectRatio: 1.6,
+                          mainAxisExtent: 200, // fixed height — no overflow
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
                         ),
@@ -174,12 +174,12 @@ class _SalesInvoicesScreenState extends State<SalesInvoicesScreen> {
   }
 
   Widget _invoiceCard(BuildContext context, SalesInvoiceModel invoice) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      elevation: 3,
-      shadowColor: AppColors.primary.withValues(alpha: 0.06),
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -189,65 +189,96 @@ class _SalesInvoicesScreenState extends State<SalesInvoicesScreen> {
             ),
           );
         },
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: isDark ? AppColors.cardDark : AppColors.white,
+            border: Border.all(
+              color: isDark ? AppColors.darkGrey.withValues(alpha: 0.2) : Colors.grey.shade200,
+            ),
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    DateFormatter.toDisplay(invoice.date),
-                    style: const TextStyle(
+              // ── Header ─────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryAccent.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.receipt_outlined, color: AppColors.primaryAccent),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            invoice.itemName,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (invoice.customerName.isNotEmpty)
+                            Text(
+                              invoice.customerName,
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 12,
+                                color: AppColors.primaryAccent,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          else if (invoice.model.isNotEmpty)
+                            Text(
+                              'موديل: ${invoice.model}',
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 12,
+                                color: AppColors.darkGrey,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      DateFormatter.toDisplay(invoice.date),
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 11,
-                        color: AppColors.darkGrey),
-                  ),
-                  Row(
-                    children: [
-                      Text(
-                        invoice.itemName,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                        color: AppColors.darkGrey,
                       ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.receipt_outlined,
-                          size: 18, color: AppColors.primaryAccent),
-                    ],
-                  ),
-                ],
-              ),
-              if (invoice.model.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'موديل: ${invoice.model}',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12,
-                      color: AppColors.darkGrey),
+                    ),
+                  ],
                 ),
-              ],
-              const Divider(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _chip('${invoice.totalAmount.toStringAsFixed(0)} ج.م',
-                      'الإجمالي', AppColors.primaryAccent),
-                  _chip('${invoice.paidAmount.toStringAsFixed(0)} ج.م',
-                      'مدفوع', AppColors.success),
-                  _chip(
-                      '${invoice.remainingBalance.toStringAsFixed(0)} ج.م',
-                      'متبقي',
-                      invoice.remainingBalance > 0
-                          ? AppColors.error
-                          : AppColors.success),
-                ],
+              ),
+              const Divider(height: 1, thickness: 1),
+              // ── Amount chips ─────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _chip('${invoice.totalAmount.toStringAsFixed(0)} ج.م', 'الإجمالي', AppColors.primaryAccent),
+                    _chip('${invoice.paidAmount.toStringAsFixed(0)} ج.م', 'مدفوع', AppColors.success),
+                    _chip('${invoice.remainingBalance.toStringAsFixed(0)} ج.م', 'متبقي',
+                        invoice.remainingBalance > 0 ? AppColors.error : AppColors.success),
+                  ],
+                ),
               ),
             ],
           ),

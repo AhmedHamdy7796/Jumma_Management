@@ -7,6 +7,8 @@ import 'package:gomaa_management/database/database_constants.dart';
 class SalesInvoiceModel {
   final int? id;
   final int customerId;
+  final String customerName; // transient — populated via JOIN, not stored
+  final String customerAddress; // transient — populated via JOIN
   final String itemName;
   final String model;
   final int quantity;
@@ -20,6 +22,8 @@ class SalesInvoiceModel {
   const SalesInvoiceModel({
     this.id,
     required this.customerId,
+    this.customerName = '',
+    this.customerAddress = '',
     required this.itemName,
     required this.model,
     required this.quantity,
@@ -53,6 +57,8 @@ class SalesInvoiceModel {
     return SalesInvoiceModel(
       id: map[SalesInvoiceColumns.id] as int?,
       customerId: map[SalesInvoiceColumns.customerId] as int,
+      customerName: map['customerName'] as String? ?? '',
+      customerAddress: map['customerAddress'] as String? ?? '',
       itemName: map[SalesInvoiceColumns.itemName] as String,
       model: map[SalesInvoiceColumns.model] as String? ?? '',
       quantity: map[SalesInvoiceColumns.quantity] as int? ?? 1,
@@ -71,6 +77,8 @@ class SalesInvoiceModel {
   SalesInvoiceModel copyWith({
     int? id,
     int? customerId,
+    String? customerName,
+    String? customerAddress,
     String? itemName,
     String? model,
     int? quantity,
@@ -84,6 +92,8 @@ class SalesInvoiceModel {
     return SalesInvoiceModel(
       id: id ?? this.id,
       customerId: customerId ?? this.customerId,
+      customerName: customerName ?? this.customerName,
+      customerAddress: customerAddress ?? this.customerAddress,
       itemName: itemName ?? this.itemName,
       model: model ?? this.model,
       quantity: quantity ?? this.quantity,

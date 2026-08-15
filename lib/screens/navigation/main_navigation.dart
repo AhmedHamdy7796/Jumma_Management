@@ -93,7 +93,7 @@ class _MainNavigationState extends State<MainNavigation> {
                 BoxShadow(
                   color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
                   blurRadius: 20,
-                  offset: const Offset(4, 0),
+                  offset: const Offset(-4, 0), // Cast shadow to the left over content in RTL
                 ),
               ],
             ),
@@ -261,8 +261,8 @@ class _MainNavigationState extends State<MainNavigation> {
                     child: IconButton(
                       icon: Icon(
                         _isCollapsed
-                            ? Icons.arrow_forward_ios
-                            : Icons.arrow_back_ios,
+                            ? Icons.arrow_back_ios // Point left to expand from right sidebar
+                            : Icons.arrow_forward_ios, // Point right to collapse to right edge
                         size: 16,
                       ),
                       onPressed: () {

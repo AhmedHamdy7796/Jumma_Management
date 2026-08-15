@@ -264,6 +264,253 @@ class _UsersManagementTabState extends State<UsersManagementTab> {
     );
   }
 
+  void _showChangePasswordDialog(String username) {
+    final formKey = GlobalKey<FormState>();
+    final oldPasswordController = TextEditingController();
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool isSaving = false;
+    bool oldPasswordWrong = false; // flag to show inline error
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'تغيير كلمة المرور',
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      Text(
+                        username,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: AppColors.primaryAccent),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.lock_person_outlined, color: AppColors.primary),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 420,
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // ── Security divider ─────────────────────────
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                'لتأكيد هويتك، أدخل كلمة المرور الحالية أولاً',
+                                textAlign: TextAlign.right,
+                                style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppColors.primary),
+                              ),
+                              SizedBox(width: 6),
+                              Icon(Icons.security, color: AppColors.primary, size: 16),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // ── Old password ──────────────────────────────
+                        TextFormField(
+                          controller: oldPasswordController,
+                          textAlign: TextAlign.right,
+                          textDirection: TextDirection.rtl,
+                          obscureText: true,
+                          onChanged: (_) {
+                            if (oldPasswordWrong) {
+                              setDialogState(() => oldPasswordWrong = false);
+                            }
+                          },
+                          decoration: InputDecoration(
+                            labelText: 'كلمة المرور الحالية',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            border: const OutlineInputBorder(),
+                            errorText: oldPasswordWrong ? 'كلمة المرور الحالية غير صحيحة' : null,
+                            errorStyle: const TextStyle(fontFamily: 'Cairo'),
+                            labelStyle: const TextStyle(fontFamily: 'Cairo'),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'الرجاء إدخال كلمة المرور الحالية';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+                        const Divider(),
+                        const SizedBox(height: 8),
+
+                        // ── New password ──────────────────────────────
+                        TextFormField(
+                          controller: passwordController,
+                          textAlign: TextAlign.right,
+                          textDirection: TextDirection.rtl,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                            labelText: 'كلمة المرور الجديدة',
+                            prefixIcon: Icon(Icons.lock_reset_outlined),
+                            border: OutlineInputBorder(),
+                            labelStyle: TextStyle(fontFamily: 'Cairo'),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'الرجاء إدخال كلمة المرور الجديدة';
+                            }
+                            if (value.length < 4) {
+                              return 'كلمة المرور يجب أن تكون 4 أحرف على الأقل';
+                            }
+                            if (value == oldPasswordController.text) {
+                              return 'كلمة المرور الجديدة يجب أن تختلف عن القديمة';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: confirmPasswordController,
+                          textAlign: TextAlign.right,
+                          textDirection: TextDirection.rtl,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                            labelText: 'تأكيد كلمة المرور الجديدة',
+                            prefixIcon: Icon(Icons.lock_outline),
+                            border: OutlineInputBorder(),
+                            labelStyle: TextStyle(fontFamily: 'Cairo'),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'الرجاء تأكيد كلمة المرور';
+                            }
+                            if (value != passwordController.text) {
+                              return 'كلمتا المرور غير متطابقتين';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.pop(context),
+                  child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+                ),
+                ElevatedButton.icon(
+                  icon: isSaving
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.save_outlined, size: 18),
+                  label: const Text('حفظ', style: TextStyle(fontFamily: 'Cairo')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          // 1. Validate form fields
+                          if (!formKey.currentState!.validate()) return;
+
+                          setDialogState(() => isSaving = true);
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(context);
+
+                          try {
+                            // 2. Verify current password
+                            final isOldPasswordCorrect = await _authRepository.login(
+                              username,
+                              oldPasswordController.text,
+                            );
+
+                            if (!isOldPasswordCorrect) {
+                              setDialogState(() {
+                                oldPasswordWrong = true;
+                                isSaving = false;
+                              });
+                              return;
+                            }
+
+                            // 3. Old password verified — update to new password
+                            final success = await _authRepository.updatePassword(
+                              username,
+                              passwordController.text,
+                            );
+
+                            if (success) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('تم تغيير كلمة المرور بنجاح ✓',
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(fontFamily: 'Cairo')),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                              navigator.pop();
+                            } else {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('فشل تغيير كلمة المرور!',
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(fontFamily: 'Cairo')),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('خطأ أثناء تغيير كلمة المرور: $e',
+                                    textAlign: TextAlign.right,
+                                    style: const TextStyle(fontFamily: 'Cairo')),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          } finally {
+                            if (navigator.mounted) {
+                              setDialogState(() => isSaving = false);
+                            }
+                          }
+                        },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _users.isEmpty) {
@@ -296,12 +543,20 @@ class _UsersManagementTabState extends State<UsersManagementTab> {
                         textAlign: TextAlign.right,
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
-                      leading: isAdmin
-                          ? null
-                          : IconButton(
+                      leading: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+                            onPressed: () => _showChangePasswordDialog(username),
+                          ),
+                          if (!isAdmin)
+                            IconButton(
                               icon: const Icon(Icons.delete_outline, color: Colors.red),
                               onPressed: () => _confirmDeleteUser(username),
                             ),
+                        ],
+                      ),
                       trailing: isAdmin
                           ? Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

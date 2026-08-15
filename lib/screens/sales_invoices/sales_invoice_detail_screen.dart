@@ -5,6 +5,7 @@ import 'package:gomaa_management/cubits/sales_invoice/sales_invoice_cubit.dart';
 import 'package:gomaa_management/models/sales_invoice_model.dart';
 import 'package:gomaa_management/core/resources/app_colors.dart';
 import 'package:gomaa_management/core/utils/date_formatter.dart';
+import 'package:gomaa_management/core/utils/invoice_pdf_generator.dart';
 import 'package:gomaa_management/core/widgets/confirm_delete_dialog.dart';
 import 'sales_invoice_form_screen.dart';
 
@@ -27,6 +28,26 @@ class SalesInvoiceDetailScreen extends StatelessWidget {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
+          // Print button
+          IconButton(
+            icon: const Icon(Icons.print_outlined),
+            tooltip: 'طباعة الفاتورة',
+            onPressed: () async {
+              try {
+                await InvoicePdfGenerator.printInvoice(invoice: invoice);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('حدث خطأ أثناء الطباعة: $e',
+                          style: const TextStyle(fontFamily: 'Cairo')),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'تعديل الفاتورة',
@@ -36,7 +57,9 @@ class SalesInvoiceDetailScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => SalesInvoiceFormScreen(
                     customerId: invoice.customerId,
-                    customerName: 'العميل',
+                    customerName: invoice.customerName.isNotEmpty
+                        ? invoice.customerName
+                        : 'العميل',
                     invoice: invoice,
                   ),
                 ),

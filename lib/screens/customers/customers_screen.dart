@@ -103,12 +103,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     if (constraints.maxWidth > 600) {
                       int crossAxisCount =
                           (constraints.maxWidth / 350).floor();
+                      if (crossAxisCount < 1) crossAxisCount = 1;
                       return GridView.builder(
                         padding: const EdgeInsets.all(16),
                         gridDelegate:
                             SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
-                          childAspectRatio: 1.5,
+                          mainAxisExtent: 230, // Fixed pixel height — no overflow on resize
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
                         ),
@@ -159,18 +160,16 @@ class _CustomersScreenState extends State<CustomersScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
-      shadowColor: AppColors.primary.withValues(alpha: 0.08),
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       child: InkWell(
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  CustomerDetailScreen(customer: customer),
+              builder: (context) => CustomerDetailScreen(customer: customer),
             ),
           );
         },
@@ -178,160 +177,144 @@ class _CustomersScreenState extends State<CustomersScreen> {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                isDark ? AppColors.cardDark : AppColors.white,
-                isDark
-                    ? AppColors.cardDark.withValues(alpha: 0.9)
-                    : AppColors.lightGrey.withValues(alpha: 0.4),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+            color: isDark ? AppColors.cardDark : AppColors.white,
+            border: Border.all(
+              color: isDark ? AppColors.darkGrey.withValues(alpha: 0.2) : Colors.grey.shade200,
             ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Header row with icon, name and delete
-                Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Hug content vertically
+            children: [
+              // Header row
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline,
-                          color: AppColors.error),
-                      hoverColor:
-                          AppColors.error.withValues(alpha: 0.1),
-                      onPressed: () => ConfirmDeleteDialog.show(
-                        context,
-                        title: AppStrings.confirmDeleteTitle,
-                        content:
-                            '${AppStrings.confirmDeleteMessage} ${customer.name}؟',
-                        onDelete: () {
-                          context
-                              .read<CustomerCubit>()
-                              .deleteCustomer(customer.id!);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                AppStrings.deleteSuccess,
-                                style: TextStyle(fontFamily: 'Cairo'),
-                              ),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.person, color: AppColors.primary),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            customer.name,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
                             ),
-                          );
-                        },
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (customer.companyName != null && customer.companyName!.isNotEmpty)
+                            Text(
+                              customer.companyName!,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.darkGrey,
+                                fontFamily: 'Cairo',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined,
-                          color: AppColors.primaryAccent),
-                      hoverColor:
-                          AppColors.primaryAccent.withValues(alpha: 0.1),
+                      icon: const Icon(Icons.edit_outlined, color: AppColors.primaryAccent, size: 20),
+                      splashRadius: 20,
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                CustomerFormScreen(customer: customer),
+                            builder: (context) => CustomerFormScreen(customer: customer),
                           ),
                         );
                       },
                     ),
-                    const Spacer(),
-                    Expanded(
-                      child: Text(
-                        customer.name,
-                        textAlign: TextAlign.right,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                        ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                      splashRadius: 20,
+                      onPressed: () => ConfirmDeleteDialog.show(
+                        context,
+                        title: AppStrings.confirmDeleteTitle,
+                        content: '${AppStrings.confirmDeleteMessage} ${customer.name}؟',
+                        onDelete: () {
+                          context.read<CustomerCubit>().deleteCustomer(customer.id!);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text(AppStrings.deleteSuccess, style: TextStyle(fontFamily: 'Cairo'))),
+                          );
+                        },
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.person_pin,
-                        color: AppColors.primaryAccent),
                   ],
                 ),
-                const Divider(height: 12),
-                // Phone
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+              ),
+              const Divider(height: 1, thickness: 1),
+              // Contact details
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
                   children: [
-                    Text(
-                      customer.mobilePhone,
-                      style: const TextStyle(
-                          fontFamily: 'Cairo', fontSize: 13),
+                    Row(
+                      children: [
+                        const Icon(Icons.phone_android_outlined, size: 18, color: AppColors.darkGrey),
+                        const SizedBox(width: 8),
+                        Text(
+                          customer.mobilePhone,
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 14),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.phone_android_outlined,
-                        size: 16, color: AppColors.primaryAccent),
+                    if (customer.address != null && customer.address!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.location_on_outlined, size: 18, color: AppColors.darkGrey),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              customer.address!,
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 14),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
-                if (customer.companyName != null &&
-                    customer.companyName!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        customer.companyName!,
-                        style: const TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 13,
-                            color: AppColors.darkGrey),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.business_outlined,
-                          size: 16, color: AppColors.darkGrey),
-                    ],
-                  ),
-                ],
-                if (customer.address != null &&
-                    customer.address!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          customer.address!,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 12,
-                              color: AppColors.darkGrey),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.location_on_outlined,
-                          size: 16, color: AppColors.darkGrey),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'عرض التفاصيل والفواتير',
-                      style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 11,
-                          color: AppColors.primary),
+              ),
+              // Footer action
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.black12 : Colors.grey.shade50,
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                ),
+                child: const Center(
+                  child: Text(
+                    'عرض التفاصيل والفواتير',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryAccent,
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

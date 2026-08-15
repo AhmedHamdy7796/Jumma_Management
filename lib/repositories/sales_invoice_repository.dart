@@ -22,10 +22,15 @@ class SalesInvoiceRepository implements ISalesInvoiceRepository {
   Future<List<SalesInvoiceModel>> getAll() async {
     try {
       final db = await _dbService.database;
-      final maps = await db.query(
-        TableNames.salesInvoices,
-        orderBy: '${SalesInvoiceColumns.date} DESC',
-      );
+      final maps = await db.rawQuery('''
+        SELECT
+          si.*,
+          c.${CustomerColumns.name}    AS customerName,
+          c.${CustomerColumns.address} AS customerAddress
+        FROM ${TableNames.salesInvoices} si
+        LEFT JOIN ${TableNames.customers} c ON si.${SalesInvoiceColumns.customerId} = c.${CustomerColumns.id}
+        ORDER BY si.${SalesInvoiceColumns.date} DESC
+      ''');
       return maps.map(SalesInvoiceModel.fromMap).toList();
     } catch (e) {
       AppLogger.instance.error('Failed to get all sales invoices',
@@ -38,12 +43,16 @@ class SalesInvoiceRepository implements ISalesInvoiceRepository {
   Future<List<SalesInvoiceModel>> getByCustomer(int customerId) async {
     try {
       final db = await _dbService.database;
-      final maps = await db.query(
-        TableNames.salesInvoices,
-        where: '${SalesInvoiceColumns.customerId} = ?',
-        whereArgs: [customerId],
-        orderBy: '${SalesInvoiceColumns.date} DESC',
-      );
+      final maps = await db.rawQuery('''
+        SELECT
+          si.*,
+          c.${CustomerColumns.name}    AS customerName,
+          c.${CustomerColumns.address} AS customerAddress
+        FROM ${TableNames.salesInvoices} si
+        LEFT JOIN ${TableNames.customers} c ON si.${SalesInvoiceColumns.customerId} = c.${CustomerColumns.id}
+        WHERE si.${SalesInvoiceColumns.customerId} = ?
+        ORDER BY si.${SalesInvoiceColumns.date} DESC
+      ''', [customerId]);
       return maps.map(SalesInvoiceModel.fromMap).toList();
     } catch (e) {
       AppLogger.instance.error(

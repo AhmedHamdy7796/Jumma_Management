@@ -92,11 +92,13 @@ class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
       emit(SalesInvoiceLoaded(List.from(_allInvoices)));
       return;
     }
-    final q = query.toLowerCase();
+    final q = query.toLowerCase().trim();
     final filtered = _allInvoices.where((inv) {
       return inv.itemName.toLowerCase().contains(q) ||
           inv.model.toLowerCase().contains(q) ||
-          inv.notes.toLowerCase().contains(q);
+          inv.notes.toLowerCase().contains(q) ||
+          inv.customerName.toLowerCase().contains(q) ||
+          (inv.id?.toString() ?? '').contains(q);
     }).toList();
     emit(SalesInvoiceLoaded(filtered));
   }

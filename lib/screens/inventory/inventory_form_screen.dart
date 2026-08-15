@@ -118,7 +118,7 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _sectionHeader('بيانات الصنف', Icons.inventory_2_outlined),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _nameController,
                 label: 'اسم الصنف',
@@ -126,7 +126,7 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                 icon: Icons.precision_manufacturing_outlined,
                 validator: ValidationService.validateRequiredField,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -151,23 +151,23 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _categoryController,
                 label: 'الفئة / التصنيف',
                 hint: 'مثال: مستلزمات إنتاج',
                 icon: Icons.category_outlined,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _locationController,
                 label: 'الموقع / المستودع (اختياري)',
                 hint: 'مثال: الرف B-3',
                 icon: Icons.location_on_outlined,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _sectionHeader('الأسعار', Icons.payments_outlined),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -195,9 +195,9 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _sectionHeader('ملاحظات', Icons.notes_outlined),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _notesController,
                 label: 'ملاحظات (اختياري)',
@@ -205,7 +205,7 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                 icon: Icons.notes_outlined,
                 maxLines: 3,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
               CustomButton(
                 label: _isEditing ? 'حفظ التعديلات' : 'إضافة للمخزون',
                 icon: _isEditing ? Icons.save_outlined : Icons.add_box_outlined,

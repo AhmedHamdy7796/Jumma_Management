@@ -119,7 +119,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                 icon: Icons.person_outline,
                 validator: ValidationService.validateRequiredField,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _mobileController,
                 label: 'رقم الهاتف',
@@ -128,7 +128,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                 keyboardType: TextInputType.phone,
                 validator: ValidationService.validateRequiredField,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _sectionHeader('بيانات الشركة / المصنع', Icons.business_outlined),
               const SizedBox(height: 16),
               CustomTextField(
@@ -137,7 +137,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                 hint: 'مثال: مصنع النور للصناعة',
                 icon: Icons.factory_outlined,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _addressController,
                 label: 'العنوان (اختياري)',
@@ -145,7 +145,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                 icon: Icons.location_on_outlined,
                 maxLines: 2,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _sectionHeader('ملاحظات', Icons.notes_outlined),
               const SizedBox(height: 16),
               CustomTextField(
@@ -155,7 +155,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                 icon: Icons.notes_outlined,
                 maxLines: 3,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
               CustomButton(
                 label: _isEditing ? 'حفظ التعديلات' : 'إضافة العميل',
                 icon: _isEditing ? Icons.save_outlined : Icons.add,

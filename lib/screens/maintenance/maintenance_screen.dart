@@ -105,52 +105,109 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
           itemCount: schedule.length,
           itemBuilder: (context, index) {
             final item = schedule[index];
+            final isCompleted = item.isCompleted;
             return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.only(bottom: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+              shadowColor: Colors.black.withValues(alpha: 0.1),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isCompleted
+                        ? AppColors.success.withValues(alpha: 0.3)
+                        : AppColors.primary.withValues(alpha: 0.2),
+                  ),
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: AppColors.error),
-                          onPressed: () => ConfirmDeleteDialog.show(
-                            context,
-                            title: AppStrings.confirmDeleteTitle,
-                            content: 'هل أنت متأكد من حذف هذا الموعد المجدول؟',
-                            onDelete: () {
-                              context.read<MaintenanceCubit>().deleteScheduleItem(item.id!);
-                            },
+                    // ── Header ───────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isCompleted
+                                  ? AppColors.success.withValues(alpha: 0.1)
+                                  : AppColors.primary.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isCompleted ? Icons.check_circle_outline : Icons.handyman_outlined,
+                              color: isCompleted ? AppColors.success : AppColors.primary,
+                            ),
                           ),
-                        ),
-                        if (!item.isCompleted)
-                          TextButton.icon(
-                            icon: const Icon(Icons.check, color: AppColors.success),
-                            label: const Text('إكمال الصيانة', style: TextStyle(color: AppColors.success)),
-                            onPressed: () {
-                              context.read<MaintenanceCubit>().updateScheduleItem(
-                                item.copyWith(completedAt: DateTime.now()),
-                              );
-                            },
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.type == 'preventive' ? 'وقائية' : item.type == 'inspection' ? 'فحص دوري' : 'معايرة',
+                                  style: const TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                Text(
+                                  'رقم المعدة: #${item.equipmentId}',
+                                  style: const TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 13,
+                                    color: AppColors.darkGrey,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        const Spacer(),
-                        Text(
-                          'نوع الصيانة: ${item.type == 'preventive' ? 'وقائية' : item.type == 'inspection' ? 'فحص دوري' : 'معايرة'}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                      ],
+                          if (!isCompleted)
+                            TextButton.icon(
+                              icon: const Icon(Icons.check, color: AppColors.success, size: 18),
+                              label: const Text('إكمال', style: TextStyle(color: AppColors.success, fontFamily: 'Cairo', fontSize: 12)),
+                              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                              onPressed: () {
+                                context.read<MaintenanceCubit>().updateScheduleItem(
+                                  item.copyWith(completedAt: DateTime.now()),
+                                );
+                              },
+                            ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                            splashRadius: 20,
+                            onPressed: () => ConfirmDeleteDialog.show(
+                              context,
+                              title: AppStrings.confirmDeleteTitle,
+                              content: 'هل أنت متأكد من حذف هذا الموعد المجدول؟',
+                              onDelete: () {
+                                context.read<MaintenanceCubit>().deleteScheduleItem(item.id!);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const Divider(),
-                    InfoRow(icon: Icons.precision_manufacturing, text: 'رقم المعدة المجدولة: #${item.equipmentId}'),
-                    InfoRow(icon: Icons.calendar_today, text: 'التاريخ المجدول: ${DateFormatter.toDisplay(item.scheduledDate)}'),
-                    if (item.isCompleted)
-                      InfoRow(icon: Icons.check_circle_outline, text: 'تمت الصيانة بتاريخ: ${DateFormatter.toDisplay(item.completedAt!)}'),
-                    if (item.notes.isNotEmpty)
-                      InfoRow(icon: Icons.notes, text: 'ملاحظات الجدولة: ${item.notes}'),
+                    const Divider(height: 1, thickness: 1),
+                    // ── Details ──────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      child: Column(
+                        children: [
+                          InfoRow(icon: Icons.calendar_today, text: 'التاريخ المجدول: ${DateFormatter.toDisplay(item.scheduledDate)}'),
+                          if (isCompleted) ...[
+                            const SizedBox(height: 6),
+                            InfoRow(icon: Icons.check_circle_outline, text: 'تمت بتاريخ: ${DateFormatter.toDisplay(item.completedAt!)}'),
+                          ],
+                          if (item.notes.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            InfoRow(icon: Icons.notes, text: 'ملاحظات: ${item.notes}'),
+                          ],
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -186,43 +243,93 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
           itemBuilder: (context, index) {
             final record = records[index];
             return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.only(bottom: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+              shadowColor: Colors.black.withValues(alpha: 0.1),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: AppColors.error),
-                          onPressed: () => ConfirmDeleteDialog.show(
-                            context,
-                            title: AppStrings.confirmDeleteTitle,
-                            content: 'هل أنت متأكد من حذف هذا السجل بشكل نهائي؟',
-                            onDelete: () {
-                              context.read<MaintenanceCubit>().deleteRecord(record.id!);
-                            },
+                    // ── Header ───────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.teal.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.engineering_outlined, color: AppColors.teal),
                           ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          'الفني المسؤول: ${record.technicianName}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  record.technicianName,
+                                  style: const TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  'رقم المعدة: #${record.equipmentId}',
+                                  style: const TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 13,
+                                    color: AppColors.darkGrey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                            splashRadius: 20,
+                            onPressed: () => ConfirmDeleteDialog.show(
+                              context,
+                              title: AppStrings.confirmDeleteTitle,
+                              content: 'هل أنت متأكد من حذف هذا السجل بشكل نهائي؟',
+                              onDelete: () {
+                                context.read<MaintenanceCubit>().deleteRecord(record.id!);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const Divider(),
-                    InfoRow(icon: Icons.precision_manufacturing, text: 'رقم المعدة: #${record.equipmentId}'),
-                    InfoRow(icon: Icons.error_outline, text: 'وصف المشكلة: ${record.issueDescription}'),
-                    if (record.workDone.isNotEmpty)
-                      InfoRow(icon: Icons.check, text: 'ما تم إنجازه: ${record.workDone}'),
-                    InfoRow(icon: Icons.calendar_today, text: 'تاريخ البدء: ${DateFormatter.toDisplay(record.startDate)}'),
-                    if (record.endDate != null)
-                      InfoRow(icon: Icons.calendar_today_outlined, text: 'تاريخ الانتهاء: ${DateFormatter.toDisplay(record.endDate!)}'),
-                    InfoRow(icon: Icons.attach_money, text: 'التكلفة الإجمالية: ${record.cost.toStringAsFixed(2)} ${AppStrings.currency}'),
+                    const Divider(height: 1, thickness: 1),
+                    // ── Details ──────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      child: Column(
+                        children: [
+                          InfoRow(icon: Icons.error_outline, text: 'وصف المشكلة: ${record.issueDescription}'),
+                          if (record.workDone.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            InfoRow(icon: Icons.check, text: 'ما تم إنجازه: ${record.workDone}'),
+                          ],
+                          const SizedBox(height: 6),
+                          InfoRow(icon: Icons.calendar_today, text: 'تاريخ البدء: ${DateFormatter.toDisplay(record.startDate)}'),
+                          if (record.endDate != null) ...[
+                            const SizedBox(height: 6),
+                            InfoRow(icon: Icons.calendar_today_outlined, text: 'تاريخ الانتهاء: ${DateFormatter.toDisplay(record.endDate!)}'),
+                          ],
+                          const SizedBox(height: 6),
+                          InfoRow(icon: Icons.attach_money, text: 'التكلفة: ${record.cost.toStringAsFixed(2)} ${AppStrings.currency}'),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

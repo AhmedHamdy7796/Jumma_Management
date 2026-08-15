@@ -290,7 +290,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                             size: 50,
                             color: Colors.grey.shade400,
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 16),
                           Text(
                             AppStrings.addMachineImage,
                             style: TextStyle(
@@ -308,6 +308,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
               controller: _machineNameController,
               validator: ValidationService.validateName,
             ),
+            const SizedBox(height: 16),
             CustomTextField(
               label: AppStrings.model,
               controller: _modelController,
@@ -316,18 +317,21 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                 AppStrings.enterModel,
               ),
             ),
+            const SizedBox(height: 16),
             CustomTextField(
               label: AppStrings.quantity,
               controller: _quantityController,
               keyboardType: TextInputType.number,
               validator: ValidationService.validateQuantity,
             ),
+            const SizedBox(height: 16),
             CustomTextField(
               label: AppStrings.price,
               controller: _priceController,
               keyboardType: TextInputType.number,
               validator: ValidationService.validateAmount,
             ),
+            const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Container(
@@ -389,12 +393,13 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
               onTap: _selectDate,
               suffixIcon: const Icon(Icons.calendar_today),
             ),
+            const SizedBox(height: 16),
             CustomTextField(
               label: AppStrings.notes,
               controller: _notesController,
               maxLines: 3,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             CustomButton(
               text: widget.purchase == null
                   ? AppStrings.add

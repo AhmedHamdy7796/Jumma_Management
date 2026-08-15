@@ -238,19 +238,19 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                 label: 'اسم الفني',
                 validator: ValidationService.validateRequiredField,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _issueController,
                 label: 'المشكلة / العطل',
                 validator: ValidationService.validateRequiredField,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _workDoneController,
                 label: 'الإجراء المتخذ / قطع الغيار',
                 validator: ValidationService.validateRequiredField,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _costController,
                 label: 'التكلفة الإجمالية',
@@ -261,7 +261,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
               ),
             ],
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             // Date Picker trigger
             ListTile(
               title: const Text(
@@ -288,7 +288,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
               label: 'ملاحظات إضافية',
               maxLines: 3,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             CustomButton(
               text: 'حفظ وتأكيد العملية',
               isLoading: _isLoading,

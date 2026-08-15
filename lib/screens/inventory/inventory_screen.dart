@@ -100,7 +100,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       gridDelegate:
                           SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: count,
-                        childAspectRatio: 1.4,
+                        mainAxisExtent: 210, // fixed height — no overflow
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
                       ),
@@ -151,163 +151,170 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final isLowStock = item.quantity <= 2;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 3,
-      shadowColor: AppColors.primary.withValues(alpha: 0.07),
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       child: InkWell(
         onTap: () async {
           await Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => InventoryFormScreen(item: item),
-            ),
+            MaterialPageRoute(builder: (_) => InventoryFormScreen(item: item)),
           );
-          if (context.mounted) {
-            context.read<InventoryCubit>().loadInventory();
-          }
+          if (context.mounted) context.read<InventoryCubit>().loadInventory();
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                isDark ? AppColors.cardDark : AppColors.white,
-                isDark
-                    ? AppColors.cardDark.withValues(alpha: 0.9)
-                    : AppColors.lightGrey.withValues(alpha: 0.4),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+            color: isDark ? AppColors.cardDark : AppColors.white,
+            border: Border.all(
+              color: isDark ? AppColors.darkGrey.withValues(alpha: 0.2) : Colors.grey.shade200,
             ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Header row
-                Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Header ─────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                child: Row(
                   children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.inventory_2_outlined, color: AppColors.primary),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (item.model.isNotEmpty)
+                            Text(
+                              item.model,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.darkGrey,
+                                fontFamily: 'Cairo',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                    // Quantity badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isLowStock
+                            ? AppColors.error.withValues(alpha: 0.1)
+                            : AppColors.success.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isLowStock
+                              ? AppColors.error.withValues(alpha: 0.3)
+                              : AppColors.success.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isLowStock ? Icons.warning_amber_outlined : Icons.check_circle_outline,
+                            size: 14,
+                            color: isLowStock ? AppColors.error : AppColors.success,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${item.quantity} قطعة',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isLowStock ? AppColors.error : AppColors.success,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 4),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline,
-                          color: AppColors.error),
-                      hoverColor:
-                          AppColors.error.withValues(alpha: 0.1),
+                      icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                      splashRadius: 20,
                       onPressed: () => ConfirmDeleteDialog.show(
                         context,
                         title: 'حذف الصنف',
-                        content:
-                            'هل تريد حذف "${item.name}" من المخزون؟',
-                        onDelete: () => context
-                            .read<InventoryCubit>()
-                            .deleteItem(item.id!),
+                        content: 'هل تريد حذف "${item.name}" من المخزون؟',
+                        onDelete: () => context.read<InventoryCubit>().deleteItem(item.id!),
                       ),
                     ),
-                    const Spacer(),
-                    Flexible(
-                      child: Text(
-                        item.name,
-                        textAlign: TextAlign.right,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.inventory_2_outlined,
-                        color: AppColors.primaryAccent, size: 20),
                   ],
                 ),
-                if (item.model.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    item.model,
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 12,
-                        color: AppColors.darkGrey),
-                  ),
-                ],
-                const Divider(height: 14),
-                // Quantity badge + category
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              ),
+              const Divider(height: 1, thickness: 1),
+              // ── Prices + Category ───────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                child: Row(
                   children: [
-                    // Category chip
+                    // Purchase price
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('سعر الشراء', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppColors.darkGrey)),
+                          Text(
+                            '${item.purchasePrice.toStringAsFixed(2)} ج.م',
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.darkGrey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Selling price
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('سعر البيع', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppColors.darkGrey)),
+                          Text(
+                            '${item.sellingPrice.toStringAsFixed(2)} ج.م',
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.success),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Category
                     if (item.category.isNotEmpty)
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           item.category,
-                          style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 11,
-                              color: AppColors.primary),
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppColors.primary),
                         ),
                       ),
-                    // Quantity
-                    Row(
-                      children: [
-                        Text(
-                          '${item.quantity} قطعة',
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: isLowStock
-                                ? AppColors.error
-                                : AppColors.success,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          isLowStock
-                              ? Icons.warning_amber_outlined
-                              : Icons.check_circle_outline,
-                          size: 16,
-                          color: isLowStock
-                              ? AppColors.error
-                              : AppColors.success,
-                        ),
-                      ],
-                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                // Prices
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'بيع: ${item.sellingPrice.toStringAsFixed(2)} ج.م',
-                      style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 12,
-                          color: AppColors.success),
-                    ),
-                    Text(
-                      'شراء: ${item.purchasePrice.toStringAsFixed(2)} ج.م',
-                      style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 12,
-                          color: AppColors.darkGrey),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

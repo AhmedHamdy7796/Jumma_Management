@@ -7,7 +7,6 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'package:gomaa_management/database/database_constants.dart';
 import 'core/resources/app_strings.dart';
 import 'core/routes/app_router.dart';
 import 'core/routes/routes.dart';
@@ -105,11 +104,6 @@ class MyApp extends StatelessWidget {
       ],
       child: BlocBuilder<SettingsCubit, SettingsState>(
         builder: (context, settingsState) {
-          String selectedLanguage = 'ar';
-          if (settingsState is SettingsLoaded) {
-            selectedLanguage = settingsState.settings[SettingsKeys.language] ?? 'ar';
-          }
-
           return BlocBuilder<ThemeCubit, ThemeMode>(
             builder: (context, themeMode) {
               return MaterialApp(
@@ -118,7 +112,7 @@ class MyApp extends StatelessWidget {
                 theme: AppThemeData.lightTheme,
                 darkTheme: AppThemeData.darkTheme,
                 themeMode: themeMode,
-                locale: Locale(selectedLanguage, ''),
+                locale: const Locale('ar', ''),
                 supportedLocales: const [
                   Locale('ar', ''),
                   Locale('en', ''),
@@ -128,6 +122,10 @@ class MyApp extends StatelessWidget {
                   GlobalWidgetsLocalizations.delegate,
                   GlobalCupertinoLocalizations.delegate,
                 ],
+                builder: (context, child) => Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: child!,
+                ),
                 onGenerateRoute: _appRouter.onGenerateRoute,
                 initialRoute: Routes.splash,
               );

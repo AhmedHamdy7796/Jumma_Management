@@ -161,6 +161,7 @@ class _FixFormScreenState extends State<FixFormScreen> {
               controller: _machineNameController,
               validator: ValidationService.validateName,
             ),
+            const SizedBox(height: 16),
             CustomTextField(
               label: AppStrings.model,
               controller: _modelController,
@@ -169,16 +170,19 @@ class _FixFormScreenState extends State<FixFormScreen> {
                 AppStrings.enterModel,
               ),
             ),
+            const SizedBox(height: 16),
             CustomTextField(
               label: AppStrings.dryer,
               controller: _dryerTypeController,
             ),
+            const SizedBox(height: 16),
             CustomTextField(
               label: AppStrings.quantity,
               controller: _quantityController,
               keyboardType: TextInputType.number,
               validator: ValidationService.validateQuantity,
             ),
+            const SizedBox(height: 16),
             CustomTextField(
               label: AppStrings.issue,
               controller: _issueController,
@@ -197,7 +201,7 @@ class _FixFormScreenState extends State<FixFormScreen> {
                     AppStrings.status,
                     style: TextStyle(fontSize: 16, fontFamily: 'Arial'),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     initialValue: _status,
                     decoration: InputDecoration(
@@ -248,6 +252,7 @@ class _FixFormScreenState extends State<FixFormScreen> {
               keyboardType: TextInputType.number,
               validator: ValidationService.validateAmount,
             ),
+            const SizedBox(height: 16),
             CustomTextField(
               label: AppStrings.date,
               controller: TextEditingController(
@@ -257,12 +262,13 @@ class _FixFormScreenState extends State<FixFormScreen> {
               onTap: _selectDate,
               suffixIcon: const Icon(Icons.calendar_today),
             ),
+            const SizedBox(height: 16),
             CustomTextField(
               label: AppStrings.notes,
               controller: _notesController,
               maxLines: 3,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             CustomButton(
               text: widget.fix == null ? AppStrings.add : AppStrings.update,
               onPressed: _saveFix,
