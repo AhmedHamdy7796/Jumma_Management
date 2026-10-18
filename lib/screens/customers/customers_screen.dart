@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gomaa_management/cubits/customer/customer_cubit.dart';
 import 'package:gomaa_management/cubits/customer/customer_state.dart';
+import 'package:gomaa_management/cubits/sales_invoice/sales_invoice_cubit.dart';
 import 'package:gomaa_management/models/customer_model.dart';
 import 'customer_form_screen.dart';
 import 'customer_detail_screen.dart';
@@ -248,6 +249,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         content: '${AppStrings.confirmDeleteMessage} ${customer.name}؟',
                         onDelete: () {
                           context.read<CustomerCubit>().deleteCustomer(customer.id!);
+                          context.read<SalesInvoiceCubit>().loadAll();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text(AppStrings.deleteSuccess, style: TextStyle(fontFamily: 'Cairo'))),
                           );

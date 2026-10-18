@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gomaa_management/cubits/inventory/inventory_cubit.dart';
+import 'package:gomaa_management/cubits/maintenance/maintenance_cubit.dart';
 import 'package:gomaa_management/models/inventory_model.dart';
 import 'package:gomaa_management/core/resources/app_colors.dart';
 import 'package:gomaa_management/core/widgets/empty_state.dart';
@@ -247,7 +248,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         context,
                         title: 'حذف الصنف',
                         content: 'هل تريد حذف "${item.name}" من المخزون؟',
-                        onDelete: () => context.read<InventoryCubit>().deleteItem(item.id!),
+                        onDelete: () {
+                          context.read<InventoryCubit>().deleteItem(item.id!);
+                          context.read<MaintenanceCubit>().loadMaintenanceData();
+                        },
                       ),
                     ),
                   ],
