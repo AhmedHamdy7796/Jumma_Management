@@ -18,6 +18,11 @@ class CustomerDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Capture the global cubit BEFORE this BlocProvider shadows it.
+    // After the local BlocProvider is inserted, context.read<SalesInvoiceCubit>()
+    // would resolve to the local instance instead.
+    final globalCubit = context.read<SalesInvoiceCubit>();
+
     return BlocProvider(
       create: (ctx) => SalesInvoiceCubit(
         SalesInvoiceRepository(),
@@ -25,6 +30,9 @@ class CustomerDetailScreen extends StatelessWidget {
           if (ctx.mounted) {
             ctx.read<InventoryCubit>().loadInventory();
           }
+        },
+        onDataChanged: () {
+          if (!globalCubit.isClosed) globalCubit.loadAll();
         },
       )..loadForCustomer(customer.id!),
       child: _CustomerDetailView(customer: customer),

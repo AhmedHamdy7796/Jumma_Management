@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:gomaa_management/models/sales_invoice_model.dart';
@@ -36,11 +37,16 @@ class SalesInvoiceError extends SalesInvoiceState {
 
 class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
   final ISalesInvoiceRepository _repo;
-  final void Function()? onInventoryChanged;
+  final VoidCallback? onInventoryChanged;
+  final VoidCallback? onDataChanged;
   List<SalesInvoiceModel> _allInvoices = [];
   int? _currentCustomerId;
 
-  SalesInvoiceCubit(this._repo, {this.onInventoryChanged}) : super(SalesInvoiceInitial());
+  SalesInvoiceCubit(
+    this._repo, {
+    this.onInventoryChanged,
+    this.onDataChanged,
+  }) : super(SalesInvoiceInitial());
 
   Future<void> loadAll() async {
     _currentCustomerId = null;
@@ -77,6 +83,7 @@ class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
       await _repo.create(invoice);
       await _reloadCurrent();
       onInventoryChanged?.call();
+      onDataChanged?.call();
     } catch (e) {
       emit(SalesInvoiceError(e.toString()));
     }
@@ -87,6 +94,7 @@ class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
       await _repo.update(invoice);
       await _reloadCurrent();
       onInventoryChanged?.call();
+      onDataChanged?.call();
     } catch (e) {
       emit(SalesInvoiceError(e.toString()));
     }
@@ -97,6 +105,7 @@ class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
       await _repo.delete(id);
       await _reloadCurrent();
       onInventoryChanged?.call();
+      onDataChanged?.call();
     } catch (e) {
       emit(SalesInvoiceError(e.toString()));
     }
