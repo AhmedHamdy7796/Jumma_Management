@@ -31,6 +31,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   final _priceController = TextEditingController();
   final _paidController = TextEditingController();
   final _notesController = TextEditingController();
+  final _dateController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
   String? _imagePath;
@@ -42,6 +43,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   void initState() {
     super.initState();
     _initDir();
+    _dateController.text = DateFormatter.toDisplay(_selectedDate);
     if (widget.purchase != null) {
       _machineNameController.text = widget.purchase!.machineName;
       _modelController.text = widget.purchase!.model;
@@ -50,6 +52,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
       _paidController.text = widget.purchase!.paidAmount.toString();
       _notesController.text = widget.purchase!.notes;
       _selectedDate = widget.purchase!.date;
+      _dateController.text = DateFormatter.toDisplay(widget.purchase!.date);
       _imagePath = widget.purchase!.imagePath;
     }
   }
@@ -69,6 +72,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     _priceController.dispose();
     _paidController.dispose();
     _notesController.dispose();
+    _dateController.dispose();
     super.dispose();
   }
 
@@ -93,6 +97,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
+        _dateController.text = DateFormatter.toDisplay(picked);
       });
     }
   }
@@ -158,15 +163,15 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
 
     final purchase = PurchaseModel(
       id: widget.purchase?.id,
-      machineName: _machineNameController.text,
-      model: _modelController.text,
-      quantity: int.parse(_quantityController.text),
-      price: double.parse(_priceController.text),
+      machineName: _machineNameController.text.trim(),
+      model: _modelController.text.trim(),
+      quantity: int.tryParse(_quantityController.text) ?? 1,
+      price: double.tryParse(_priceController.text) ?? 0.0,
       totalAmount: _totalAmount,
-      paidAmount: double.parse(_paidController.text),
+      paidAmount: double.tryParse(_paidController.text) ?? 0.0,
       remainingBalance: _remainingBalance,
       date: _selectedDate,
-      notes: _notesController.text,
+      notes: _notesController.text.trim(),
       imagePath: _imagePath,
     );
 
@@ -386,9 +391,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             ),
             CustomTextField(
               label: AppStrings.date,
-              controller: TextEditingController(
-                text: DateFormatter.toDisplay(_selectedDate),
-              ),
+              controller: _dateController,
               readOnly: true,
               onTap: _selectDate,
               suffixIcon: const Icon(Icons.calendar_today),
