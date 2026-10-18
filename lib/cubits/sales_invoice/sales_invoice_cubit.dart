@@ -36,11 +36,14 @@ class SalesInvoiceError extends SalesInvoiceState {
 
 class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
   final ISalesInvoiceRepository _repo;
+  final void Function()? onInventoryChanged;
   List<SalesInvoiceModel> _allInvoices = [];
+  int? _currentCustomerId;
 
-  SalesInvoiceCubit(this._repo) : super(SalesInvoiceInitial());
+  SalesInvoiceCubit(this._repo, {this.onInventoryChanged}) : super(SalesInvoiceInitial());
 
   Future<void> loadAll() async {
+    _currentCustomerId = null;
     emit(SalesInvoiceLoading());
     try {
       _allInvoices = await _repo.getAll();
@@ -51,6 +54,7 @@ class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
   }
 
   Future<void> loadForCustomer(int customerId) async {
+    _currentCustomerId = customerId;
     emit(SalesInvoiceLoading());
     try {
       final invoices = await _repo.getByCustomer(customerId);
@@ -60,10 +64,19 @@ class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
     }
   }
 
+  Future<void> _reloadCurrent() async {
+    if (_currentCustomerId != null) {
+      await loadForCustomer(_currentCustomerId!);
+    } else {
+      await loadAll();
+    }
+  }
+
   Future<void> addInvoice(SalesInvoiceModel invoice) async {
     try {
       await _repo.create(invoice);
-      await loadAll();
+      await _reloadCurrent();
+      onInventoryChanged?.call();
     } catch (e) {
       emit(SalesInvoiceError(e.toString()));
     }
@@ -72,7 +85,8 @@ class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
   Future<void> updateInvoice(SalesInvoiceModel invoice) async {
     try {
       await _repo.update(invoice);
-      await loadAll();
+      await _reloadCurrent();
+      onInventoryChanged?.call();
     } catch (e) {
       emit(SalesInvoiceError(e.toString()));
     }
@@ -81,7 +95,8 @@ class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
   Future<void> deleteInvoice(int id) async {
     try {
       await _repo.delete(id);
-      await loadAll();
+      await _reloadCurrent();
+      onInventoryChanged?.call();
     } catch (e) {
       emit(SalesInvoiceError(e.toString()));
     }

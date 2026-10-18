@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gomaa_management/cubits/sales_invoice/sales_invoice_cubit.dart';
+import 'package:gomaa_management/cubits/inventory/inventory_cubit.dart';
+import 'package:gomaa_management/repositories/inventory_repository.dart';
 import 'package:gomaa_management/models/sales_invoice_model.dart';
 import 'package:gomaa_management/core/resources/app_colors.dart';
 import 'package:gomaa_management/services/validation_service.dart';
@@ -84,19 +86,78 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
 
-    final price = double.parse(_priceController.text);
-    final paid = double.tryParse(_paidController.text) ?? 0;
+    final price = double.tryParse(_priceController.text) ?? 0.0;
+    final paid = double.tryParse(_paidController.text) ?? 0.0;
     final qty = int.tryParse(_quantityController.text) ?? 1;
     final total = price * qty;
     final remaining = total - paid;
+    final itemName = _itemNameController.text.trim();
+    final model = _modelController.text.trim();
+
+    // Check available inventory quantity and warn if insufficient
+    final inventoryRepo = InventoryRepository();
+    final invItem = await inventoryRepo.getByNameAndModel(itemName, model);
+    final availableQty = invItem?.quantity ?? 0;
+    final oldQty = widget.invoice != null &&
+            widget.invoice!.itemName.trim() == itemName &&
+            widget.invoice!.model.trim() == model
+        ? widget.invoice!.quantity
+        : 0;
+    final effectiveAvailable = availableQty + oldQty;
+
+    if (effectiveAvailable < qty) {
+      if (!mounted) return;
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+              SizedBox(width: 8),
+              Text(
+                'تنبيه نقص المخزون',
+                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          content: Text(
+            'الكمية المتاحة في المخزون ($availableQty) أقل من الكمية المطلوب بيعها ($qty).\n\nهل ترغب في المتابعة وإتمام الفاتورة بالرغم من ذلك؟',
+            textDirection: TextDirection.rtl,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text(
+                'متابعة وإتمام البيع',
+                style: TextStyle(fontFamily: 'Cairo', color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (proceed != true) return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = true);
 
     final invoice = SalesInvoiceModel(
       id: widget.invoice?.id,
       customerId: widget.customerId,
-      itemName: _itemNameController.text.trim(),
-      model: _modelController.text.trim(),
+      itemName: itemName,
+      model: model,
       quantity: qty,
       price: price,
       totalAmount: total,
@@ -112,7 +173,10 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
       } else {
         await context.read<SalesInvoiceCubit>().addInvoice(invoice);
       }
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        context.read<InventoryCubit>().loadInventory();
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

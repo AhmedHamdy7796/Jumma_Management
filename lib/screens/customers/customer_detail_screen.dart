@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gomaa_management/cubits/sales_invoice/sales_invoice_cubit.dart';
+import 'package:gomaa_management/cubits/inventory/inventory_cubit.dart';
 import 'package:gomaa_management/models/customer_model.dart';
 import 'package:gomaa_management/models/sales_invoice_model.dart';
 import 'package:gomaa_management/repositories/sales_invoice_repository.dart';
@@ -18,8 +19,14 @@ class CustomerDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => SalesInvoiceCubit(SalesInvoiceRepository())
-        ..loadForCustomer(customer.id!),
+      create: (ctx) => SalesInvoiceCubit(
+        SalesInvoiceRepository(),
+        onInventoryChanged: () {
+          if (ctx.mounted) {
+            ctx.read<InventoryCubit>().loadInventory();
+          }
+        },
+      )..loadForCustomer(customer.id!),
       child: _CustomerDetailView(customer: customer),
     );
   }
@@ -192,6 +199,7 @@ class _CustomerDetailView extends StatelessWidget {
                         context
                             .read<SalesInvoiceCubit>()
                             .loadForCustomer(customer.id!);
+                        context.read<InventoryCubit>().loadInventory();
                       }
                     });
                   },
@@ -310,7 +318,14 @@ class _CustomerDetailView extends StatelessWidget {
             MaterialPageRoute(
               builder: (_) => SalesInvoiceDetailScreen(invoice: invoice),
             ),
-          );
+          ).then((_) {
+            if (context.mounted) {
+              context
+                  .read<SalesInvoiceCubit>()
+                  .loadForCustomer(customer.id!);
+              context.read<InventoryCubit>().loadInventory();
+            }
+          });
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(

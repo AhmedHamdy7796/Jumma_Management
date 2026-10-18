@@ -88,13 +88,25 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inventoryCubit = InventoryCubit(inventoryRepo)..loadInventory();
+
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => CustomerCubit(customerRepo)..loadCustomers()),
-        BlocProvider(create: (_) => PurchaseCubit(purchaseRepo)..loadPurchases()),
+        BlocProvider<InventoryCubit>.value(value: inventoryCubit),
+        BlocProvider(
+          create: (_) => PurchaseCubit(
+            purchaseRepo,
+            onInventoryChanged: () => inventoryCubit.loadInventory(),
+          )..loadPurchases(),
+        ),
         BlocProvider(create: (_) => FixCubit(fixRepo)..loadFixes()),
-        BlocProvider(create: (_) => InventoryCubit(inventoryRepo)..loadInventory()),
-        BlocProvider(create: (_) => SalesInvoiceCubit(salesInvoiceRepo)..loadAll()),
+        BlocProvider(
+          create: (_) => SalesInvoiceCubit(
+            salesInvoiceRepo,
+            onInventoryChanged: () => inventoryCubit.loadInventory(),
+          )..loadAll(),
+        ),
         BlocProvider(create: (_) => MaintenanceCubit(maintenanceRepo)..loadMaintenanceData()),
         BlocProvider(create: (_) => SettingsCubit(settingsRepo)..loadSettings()),
         BlocProvider(create: (_) => AuditLogCubit(auditLogRepo)),

@@ -87,13 +87,41 @@ class SalesInvoiceRepository implements ISalesInvoiceRepository {
       int id = -1;
       await db.transaction((txn) async {
         id = await txn.insert(TableNames.salesInvoices, invoice.toMap());
+
+        // Sync with inventory (deduct sold quantity)
+        final inventoryMaps = await txn.query(
+          TableNames.inventory,
+          where: '${InventoryColumns.name} = ? AND ${InventoryColumns.model} = ?',
+          whereArgs: [invoice.itemName.trim(), invoice.model.trim()],
+        );
+
+        if (inventoryMaps.isNotEmpty) {
+          final invMap = inventoryMaps.first;
+          final currentQty = invMap[InventoryColumns.quantity] as int? ?? 0;
+          await txn.update(
+            TableNames.inventory,
+            {InventoryColumns.quantity: currentQty - invoice.quantity},
+            where: '${InventoryColumns.id} = ?',
+            whereArgs: [invMap[InventoryColumns.id]],
+          );
+        } else {
+          await txn.insert(TableNames.inventory, {
+            InventoryColumns.name: invoice.itemName.trim(),
+            InventoryColumns.model: invoice.model.trim(),
+            InventoryColumns.quantity: -invoice.quantity,
+            InventoryColumns.category: 'مبيعات',
+            InventoryColumns.purchasePrice: 0.0,
+            InventoryColumns.sellingPrice: invoice.price,
+            InventoryColumns.notes: '',
+          });
+        }
       });
       if (id != -1) {
         await _auditLogRepository.log(
           operation: AuditOperation.add,
           entityType: AuditEntityType.salesInvoice,
           entityId: id,
-          description: 'إنشاء فاتورة مبيعات: ${invoice.itemName}',
+          description: 'إنشاء فاتورة مبيعات: ${invoice.itemName} (الكمية: ${invoice.quantity})',
         );
       }
       return id;
@@ -110,12 +138,79 @@ class SalesInvoiceRepository implements ISalesInvoiceRepository {
       final db = await _dbService.database;
       int count = 0;
       await db.transaction((txn) async {
+        // 1. Get old invoice to find diff
+        final oldMaps = await txn.query(
+          TableNames.salesInvoices,
+          where: '${SalesInvoiceColumns.id} = ?',
+          whereArgs: [invoice.id],
+        );
+
+        int qtyDiff = invoice.quantity;
+        bool itemChanged = false;
+
+        if (oldMaps.isNotEmpty) {
+          final oldInvoice = SalesInvoiceModel.fromMap(oldMaps.first);
+          if (oldInvoice.itemName.trim() == invoice.itemName.trim() &&
+              oldInvoice.model.trim() == invoice.model.trim()) {
+            qtyDiff = invoice.quantity - oldInvoice.quantity;
+          } else {
+            itemChanged = true;
+            // Name or model changed, revert old inventory qty
+            final oldInvMaps = await txn.query(
+              TableNames.inventory,
+              where: '${InventoryColumns.name} = ? AND ${InventoryColumns.model} = ?',
+              whereArgs: [oldInvoice.itemName.trim(), oldInvoice.model.trim()],
+            );
+            if (oldInvMaps.isNotEmpty) {
+              final oldInvMap = oldInvMaps.first;
+              final oldCurrentQty = oldInvMap[InventoryColumns.quantity] as int? ?? 0;
+              await txn.update(
+                TableNames.inventory,
+                {InventoryColumns.quantity: oldCurrentQty + oldInvoice.quantity},
+                where: '${InventoryColumns.id} = ?',
+                whereArgs: [oldInvMap[InventoryColumns.id]],
+              );
+            }
+          }
+        }
+
+        // 2. Update invoice record
         count = await txn.update(
           TableNames.salesInvoices,
           invoice.toMap(),
           where: '${SalesInvoiceColumns.id} = ?',
           whereArgs: [invoice.id],
         );
+
+        // 3. Update new inventory qty (deduct qtyDiff or invoice.quantity)
+        if (qtyDiff != 0 || itemChanged) {
+          final inventoryMaps = await txn.query(
+            TableNames.inventory,
+            where: '${InventoryColumns.name} = ? AND ${InventoryColumns.model} = ?',
+            whereArgs: [invoice.itemName.trim(), invoice.model.trim()],
+          );
+          final deductQty = itemChanged ? invoice.quantity : qtyDiff;
+          if (inventoryMaps.isNotEmpty) {
+            final invMap = inventoryMaps.first;
+            final currentQty = invMap[InventoryColumns.quantity] as int? ?? 0;
+            await txn.update(
+              TableNames.inventory,
+              {InventoryColumns.quantity: currentQty - deductQty},
+              where: '${InventoryColumns.id} = ?',
+              whereArgs: [invMap[InventoryColumns.id]],
+            );
+          } else {
+            await txn.insert(TableNames.inventory, {
+              InventoryColumns.name: invoice.itemName.trim(),
+              InventoryColumns.model: invoice.model.trim(),
+              InventoryColumns.quantity: -deductQty,
+              InventoryColumns.category: 'مبيعات',
+              InventoryColumns.purchasePrice: 0.0,
+              InventoryColumns.sellingPrice: invoice.price,
+              InventoryColumns.notes: '',
+            });
+          }
+        }
       });
       if (count > 0 && invoice.id != null) {
         await _auditLogRepository.log(
@@ -146,6 +241,25 @@ class SalesInvoiceRepository implements ISalesInvoiceRepository {
           where: '${SalesInvoiceColumns.id} = ?',
           whereArgs: [id],
         );
+
+        if (count > 0) {
+          // Restore inventory quantity
+          final inventoryMaps = await txn.query(
+            TableNames.inventory,
+            where: '${InventoryColumns.name} = ? AND ${InventoryColumns.model} = ?',
+            whereArgs: [invoice.itemName.trim(), invoice.model.trim()],
+          );
+          if (inventoryMaps.isNotEmpty) {
+            final invMap = inventoryMaps.first;
+            final currentQty = invMap[InventoryColumns.quantity] as int? ?? 0;
+            await txn.update(
+              TableNames.inventory,
+              {InventoryColumns.quantity: currentQty + invoice.quantity},
+              where: '${InventoryColumns.id} = ?',
+              whereArgs: [invMap[InventoryColumns.id]],
+            );
+          }
+        }
       });
       if (count > 0) {
         await _auditLogRepository.log(

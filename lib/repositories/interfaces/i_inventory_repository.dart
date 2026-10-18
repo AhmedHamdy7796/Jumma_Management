@@ -20,6 +20,9 @@ abstract class IInventoryRepository {
   /// Searches inventory items by name, model or category.
   Future<List<InventoryModel>> search(String query);
 
+  /// Retrieves a specific item by name and model. Returns null if not found.
+  Future<InventoryModel?> getByNameAndModel(String name, String model);
+
   /// Adjusts the quantity of an item by [delta] (positive = add, negative = remove).
   Future<void> adjustQuantity(int id, int delta);
 }

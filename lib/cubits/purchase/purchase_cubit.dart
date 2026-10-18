@@ -40,9 +40,10 @@ class PurchaseError extends PurchaseState {
 
 class PurchaseCubit extends Cubit<PurchaseState> {
   final IPurchaseRepository _purchaseRepository;
+  final void Function()? onInventoryChanged;
   List<PurchaseModel> _allPurchases = [];
 
-  PurchaseCubit(this._purchaseRepository) : super(PurchaseInitial());
+  PurchaseCubit(this._purchaseRepository, {this.onInventoryChanged}) : super(PurchaseInitial());
 
   Future<void> loadPurchases() async {
     emit(PurchaseLoading());
@@ -58,6 +59,7 @@ class PurchaseCubit extends Cubit<PurchaseState> {
     try {
       await _purchaseRepository.create(purchase);
       await loadPurchases();
+      onInventoryChanged?.call();
     } catch (e) {
       emit(PurchaseError(e.toString()));
     }
@@ -67,6 +69,7 @@ class PurchaseCubit extends Cubit<PurchaseState> {
     try {
       await _purchaseRepository.update(purchase);
       await loadPurchases();
+      onInventoryChanged?.call();
     } catch (e) {
       emit(PurchaseError(e.toString()));
     }
@@ -76,6 +79,7 @@ class PurchaseCubit extends Cubit<PurchaseState> {
     try {
       await _purchaseRepository.delete(id);
       await loadPurchases();
+      onInventoryChanged?.call();
     } catch (e) {
       emit(PurchaseError(e.toString()));
     }

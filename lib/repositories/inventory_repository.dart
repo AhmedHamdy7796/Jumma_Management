@@ -52,6 +52,26 @@ class InventoryRepository implements IInventoryRepository {
   }
 
   @override
+  Future<InventoryModel?> getByNameAndModel(String name, String model) async {
+    try {
+      final db = await _dbService.database;
+      final maps = await db.query(
+        TableNames.inventory,
+        where: '${InventoryColumns.name} = ? AND ${InventoryColumns.model} = ?',
+        whereArgs: [name.trim(), model.trim()],
+      );
+      return maps.isNotEmpty ? InventoryModel.fromMap(maps.first) : null;
+    } catch (e) {
+      AppLogger.instance.error(
+        'Failed to get inventory item by name: $name, model: $model',
+        tag: _tag,
+        exception: e,
+      );
+      throw AppDatabaseException(technicalDetail: e.toString());
+    }
+  }
+
+  @override
   Future<int> create(InventoryModel item) async {
     try {
       final db = await _dbService.database;
