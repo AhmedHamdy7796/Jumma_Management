@@ -36,3 +36,6 @@ web/.dart_tool/
 # OS
 .DS_Store
 Thumbs.db
+
+# Google OAuth config — contains secrets, never commit
+lib/config/google_config.dart
