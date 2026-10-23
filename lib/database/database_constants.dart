@@ -192,11 +192,24 @@ abstract final class SettingsKeys {
   static const String language = 'language';
   static const String themeMode = 'theme_mode';
 
-  // Backup
+  // Backup — local
   static const String backupFolderPath = 'backup_folder_path';
   static const String autoBackupEnabled = 'auto_backup_enabled';
   static const String autoBackupIntervalDays = 'auto_backup_interval_days';
   static const String lastBackupAt = 'last_backup_at';
+  /// 'local' or 'drive' — records which kind of backup ran last.
+  static const String lastBackupKind = 'last_backup_kind';
+  /// Last error message from a backup/restore operation (empty = none).
+  static const String lastBackupError = 'last_backup_error';
+
+  // Backup — Google Drive (phase-2; Drive integration requires manual OAuth setup)
+  static const String driveEnabled = 'drive_enabled';
+  static const String driveFolderName = 'drive_folder_name';
+  static const String driveFolderId = 'drive_folder_id';
+  static const String driveBackupFrequency = 'drive_backup_frequency';
+  static const String driveKeepCount = 'drive_keep_count';
+  static const String driveWifiOnly = 'drive_wifi_only';
+  static const String lastDriveBackupAt = 'last_drive_backup_at';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
