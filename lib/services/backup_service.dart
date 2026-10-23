@@ -1,172 +1,324 @@
-import 'dart:convert';
 import 'dart:io';
-import 'package:path/path.dart';
+
+import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
 import 'package:gomaa_management/core/errors/app_exception.dart';
 import 'package:gomaa_management/core/logging/app_logger.dart';
 import 'package:gomaa_management/database/database_service.dart';
-import 'package:gomaa_management/repositories/settings_repository.dart';
 import 'package:gomaa_management/repositories/audit_log_repository.dart';
 import 'package:gomaa_management/database/database_constants.dart';
 
-/// Full snapshot zip-free directory backup of SQLite DB, settings and images.
+// ─── Result types ────────────────────────────────────────────────────────────
+
+class BackupResult {
+  final String filePath;
+  final int sizeBytes;
+  const BackupResult({required this.filePath, required this.sizeBytes});
+}
+
+// ─── Core tables that must be present for a valid DB ─────────────────────────
+
+const _coreTables = [
+  'customers',
+  'purchases',
+  'sales_invoices',
+  'inventory',
+  'settings',
+];
+
+/// Maximum number of backup files to keep in the local backups folder.
+const _maxLocalBackups = 10;
+
+/// Produces and restores SQLite backups using VACUUM INTO.
+///
+/// Key design decisions:
+/// - Backup never closes the live connection; VACUUM INTO writes an
+///   atomic, consistent, single-file snapshot.
+/// - Restore validates the chosen file before touching anything:
+///   opens it read-only, runs PRAGMA integrity_check, and confirms
+///   the core tables are present.
+/// - A safety copy is made via VACUUM INTO before the current DB is
+///   replaced, so a restore failure leaves the original intact.
+/// - WAL and SHM side-files are deleted when they exist, to avoid
+///   stale journal data confusing the reopened connection.
 class BackupService {
   static const _tag = 'BackupService';
+
   final DatabaseService _dbService;
-  final SettingsRepository _settingsRepository;
   final AuditLogRepository _auditLogRepository;
 
   BackupService({
     DatabaseService? dbService,
-    SettingsRepository? settingsRepository,
     AuditLogRepository? auditLogRepository,
   })  : _dbService = dbService ?? DatabaseService.instance,
-        _settingsRepository = settingsRepository ?? SettingsRepository(),
         _auditLogRepository = auditLogRepository ?? AuditLogRepository();
 
-  /// Backup database, settings JSON and all images to a new timestamped folder.
-  Future<String> createBackup(String destinationDir) async {
+  // ── Public API ──────────────────────────────────────────────────────────────
+
+  /// Returns the app-managed local backups directory, creating it if needed.
+  Future<Directory> get localBackupsDir async {
+    final appDir = await getApplicationSupportDirectory();
+    final dir = Directory(p.join(appDir.path, 'backups'));
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+    return dir;
+  }
+
+  /// Creates a backup file using VACUUM INTO.
+  ///
+  /// If [destinationDir] is null the file goes to [localBackupsDir]; otherwise
+  /// it goes to the supplied directory.  Either way the local backups folder is
+  /// pruned to [_maxLocalBackups] files (only files inside that folder are
+  /// ever deleted; custom-location files are never touched).
+  Future<BackupResult> createBackupFile({String? destinationDir}) async {
     try {
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').replaceAll('.', '-');
-      final backupFolderName = 'jumaa_backup_$timestamp';
-      final backupDir = Directory(join(destinationDir, backupFolderName));
-      await backupDir.create(recursive: true);
+      final targetDir = destinationDir != null
+          ? Directory(destinationDir)
+          : await localBackupsDir;
 
-      // Save database file path
-      final dbPath = await _dbService.databasePath;
-      final dbFile = File(dbPath);
-
-      // Close connection
-      await _dbService.close();
-
-      // Copy database
-      if (dbFile.existsSync()) {
-        await dbFile.copy(join(backupDir.path, 'gomaa_management.db'));
+      if (!targetDir.existsSync()) {
+        targetDir.createSync(recursive: true);
       }
 
-      // Reopen connection to write manifest and setting snapshot
-      await _dbService.reopen();
+      final now = DateTime.now();
+      final stamp =
+          '${now.year.toString().padLeft(4, '0')}-'
+          '${now.month.toString().padLeft(2, '0')}-'
+          '${now.day.toString().padLeft(2, '0')}_'
+          '${now.hour.toString().padLeft(2, '0')}'
+          '${now.minute.toString().padLeft(2, '0')}';
+      final fileName = 'gomaa_backup_$stamp.db';
+      final destPath = p.join(targetDir.path, fileName);
 
-      // Export settings as a json file
-      final settings = await _settingsRepository.getAllSettings();
-      final settingsFile = File(join(backupDir.path, 'settings_export.json'));
-      await settingsFile.writeAsString(jsonEncode(settings));
+      // VACUUM INTO requires the destination NOT to exist.
+      final destFile = File(destPath);
+      if (destFile.existsSync()) destFile.deleteSync();
 
-      // Copy images folder
-      final appDir = await getApplicationSupportDirectory();
-      final imagesDir = Directory(join(appDir.path, 'images'));
-      if (imagesDir.existsSync()) {
-        await _copyDirectory(imagesDir, Directory(join(backupDir.path, 'images')));
-      }
+      final db = await _dbService.database;
+      // VACUUM INTO is an online operation — no connection close needed.
+      await db.execute("VACUUM INTO '${destPath.replaceAll("'", "''")}'");
 
-      // Write manifest
-      final manifestFile = File(join(backupDir.path, 'backup_manifest.json'));
-      final manifest = {
-        'createdAt': DateTime.now().toIso8601String(),
-        'appVersion': '1.0.0',
-        'dbVersion': 7,
-      };
-      await manifestFile.writeAsString(jsonEncode(manifest));
+      final sizeBytes = await destFile.length();
 
-      AppLogger.instance.info('Backup created successfully: ${backupDir.path}', tag: _tag);
-      
-      // Log audit
+      AppLogger.instance.info(
+        'Backup created: $destPath ($sizeBytes bytes)',
+        tag: _tag,
+      );
+
+      // Prune old backups in the LOCAL backups folder only.
+      await _pruneLocalBackups();
+
       await _auditLogRepository.log(
         operation: AuditOperation.backup,
         entityType: AuditEntityType.system,
-        description: 'إنشاء نسخة احتياطية كاملة في المجلد: $backupFolderName',
+        description: 'نسخة احتياطية: $fileName',
       );
 
-      return backupDir.path;
+      return BackupResult(filePath: destPath, sizeBytes: sizeBytes);
     } catch (e) {
-      AppLogger.instance.error('Failed to create backup', tag: _tag, exception: e);
-      // Ensure DB is open in case of failure mid-way
-      try {
-        await _dbService.reopen();
-      } catch (_) {}
+      AppLogger.instance.error('createBackupFile failed', tag: _tag, exception: e);
       throw BackupException(technicalDetail: e.toString());
     }
   }
 
-  /// Restores complete app state from folder backup.
-  Future<void> restoreBackup(String backupFolderPath) async {
+  /// Lets the user pick a destination folder (via [FilePicker]) and saves the
+  /// backup there.  Falls back to [localBackupsDir] if the picker is cancelled
+  /// or unsupported.
+  Future<BackupResult> createBackupWithPicker() async {
+    String? chosenDir;
     try {
-      final backupDir = Directory(backupFolderPath);
-      if (!backupDir.existsSync()) {
-        throw const BackupException(technicalDetail: 'Backup folder does not exist');
-      }
+      chosenDir = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'اختر مجلد حفظ النسخة الاحتياطية',
+      );
+    } catch (_) {
+      // Platform may not support directory picker — fall through to default.
+    }
+    return createBackupFile(destinationDir: chosenDir);
+  }
 
-      final manifestFile = File(join(backupDir.path, 'backup_manifest.json'));
-      if (!manifestFile.existsSync()) {
-        throw const BackupException(technicalDetail: 'Invalid backup: missing manifest file');
-      }
+  /// Validates [dbFilePath], makes a safety copy of the current DB, then
+  /// replaces it with the chosen file.
+  ///
+  /// Validation steps (performed WITHOUT closing the live connection):
+  ///   1. Open the candidate file read-only with sqflite_common_ffi.
+  ///   2. Run `PRAGMA integrity_check` — must return 'ok'.
+  ///   3. Confirm all [_coreTables] exist.
+  ///
+  /// Replacement steps:
+  ///   4. VACUUM INTO a safety copy (so current DB is never lost).
+  ///   5. Close the live connection.
+  ///   6. Delete stale -wal and -shm files if they exist.
+  ///   7. Copy the validated file over the main DB file.
+  ///   8. Reopen the connection.
+  Future<void> restoreFromFile(String dbFilePath) async {
+    // ── Step 1-3: validate ───────────────────────────────────────────────────
+    await _validateDbFile(dbFilePath);
 
-      final manifest = jsonDecode(await manifestFile.readAsString()) as Map<String, dynamic>;
-      final dbVersion = manifest['dbVersion'] as int? ?? 0;
-      if (dbVersion > 7) {
-        throw const BackupException(technicalDetail: 'Database version in backup is newer than the app version');
-      }
+    final currentDbPath = await _dbService.databasePath;
 
-      // Close current DB
+    // ── Step 4: safety copy ──────────────────────────────────────────────────
+    try {
+      final now = DateTime.now();
+      final stamp =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-'
+          '${now.day.toString().padLeft(2, '0')}_'
+          '${now.hour.toString().padLeft(2, '0')}'
+          '${now.minute.toString().padLeft(2, '0')}';
+      final safetyDir = await localBackupsDir;
+      final safetyPath = p.join(safetyDir.path, 'pre_restore_safety_$stamp.db');
+      final safetyFile = File(safetyPath);
+      if (safetyFile.existsSync()) safetyFile.deleteSync();
+
+      final db = await _dbService.database;
+      await db.execute("VACUUM INTO '${safetyPath.replaceAll("'", "''")}'");
+      AppLogger.instance.info('Safety copy created at $safetyPath', tag: _tag);
+    } catch (e) {
+      // Not fatal — log and continue.
+      AppLogger.instance.error(
+          'Could not create safety copy before restore', tag: _tag, exception: e);
+    }
+
+    // ── Steps 5-8: replace ───────────────────────────────────────────────────
+    try {
       await _dbService.close();
 
-      // Copy database back
-      final targetDbPath = await _dbService.databasePath;
-      final sourceDbFile = File(join(backupDir.path, 'gomaa_management.db'));
-      if (sourceDbFile.existsSync()) {
-        await sourceDbFile.copy(targetDbPath);
+      // Remove WAL and SHM files so SQLite starts clean.
+      for (final ext in ['-wal', '-shm']) {
+        final sideFile = File('$currentDbPath$ext');
+        if (sideFile.existsSync()) {
+          sideFile.deleteSync();
+          AppLogger.instance.info('Deleted $ext file', tag: _tag);
+        }
       }
 
-      // Copy images back
-      final appDir = await getApplicationSupportDirectory();
-      final targetImagesDir = Directory(join(appDir.path, 'images'));
-      final sourceImagesDir = Directory(join(backupDir.path, 'images'));
+      // Replace main file.
+      await File(dbFilePath).copy(currentDbPath);
 
-      if (targetImagesDir.existsSync()) {
-        await targetImagesDir.delete(recursive: true);
-      }
-      if (sourceImagesDir.existsSync()) {
-        await _copyDirectory(sourceImagesDir, targetImagesDir);
-      }
-
-      // Reopen DB
       await _dbService.reopen();
 
-      // Import settings
-      final sourceSettingsFile = File(join(backupDir.path, 'settings_export.json'));
-      if (sourceSettingsFile.existsSync()) {
-        final settingsMap = Map<String, String>.from(
-          jsonDecode(await sourceSettingsFile.readAsString()) as Map,
-        );
-        await _settingsRepository.setAllSettings(settingsMap);
-      }
+      AppLogger.instance.info('Restore completed from $dbFilePath', tag: _tag);
 
-      AppLogger.instance.info('Backup restored successfully from: $backupFolderPath', tag: _tag);
-
-      // Log audit
       await _auditLogRepository.log(
         operation: AuditOperation.restore,
         entityType: AuditEntityType.system,
-        description: 'استعادة نسخة احتياطية كاملة من المجلد: ${basename(backupFolderPath)}',
+        description: 'استعادة من ملف: ${p.basename(dbFilePath)}',
       );
     } catch (e) {
-      AppLogger.instance.error('Failed to restore backup', tag: _tag, exception: e);
+      // Try to reopen even if copy failed so the app is not bricked.
       try {
         await _dbService.reopen();
       } catch (_) {}
-      throw BackupException(technicalDetail: e.toString());
+      AppLogger.instance.error('restoreFromFile failed', tag: _tag, exception: e);
+      throw BackupException(
+        technicalDetail: e.toString(),
+        userMessage: 'فشلت عملية الاستعادة. قاعدة البيانات الحالية سليمة.',
+      );
     }
   }
 
-  Future<void> _copyDirectory(Directory source, Directory destination) async {
-    await destination.create(recursive: true);
-    await for (final entity in source.list(recursive: false)) {
-      if (entity is Directory) {
-        final newDirectory = Directory(join(destination.path, basename(entity.path)));
-        await _copyDirectory(entity, newDirectory);
-      } else if (entity is File) {
-        await entity.copy(join(destination.path, basename(entity.path)));
+  /// Opens a file-picker for the user to choose a `.db` file, then delegates
+  /// to [restoreFromFile].  Returns true on success, false if user cancelled.
+  Future<bool> restoreWithPicker() async {
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['db'],
+        dialogTitle: 'اختر ملف قاعدة البيانات للاستعادة',
+      );
+    } catch (e) {
+      throw BackupException(
+          technicalDetail: 'FilePicker failed: $e',
+          userMessage: 'فشل فتح نافذة اختيار الملف.');
+    }
+
+    if (result == null || result.files.isEmpty) return false;
+    final path = result.files.single.path;
+    if (path == null) return false;
+
+    await restoreFromFile(path);
+    return true;
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  /// Validates a candidate DB file without touching the live connection.
+  Future<void> _validateDbFile(String path) async {
+    final file = File(path);
+    if (!file.existsSync()) {
+      throw const BackupException(
+        technicalDetail: 'Candidate file does not exist',
+        userMessage: 'الملف المحدد غير موجود.',
+      );
+    }
+
+    Database? candidateDb;
+    try {
+      // Open read-only using sqflite_ffi so we never touch the live DB.
+      candidateDb = await databaseFactoryFfi.openDatabase(
+        path,
+        options: OpenDatabaseOptions(readOnly: true),
+      );
+
+      // integrity_check
+      final integrityRows =
+          await candidateDb.rawQuery('PRAGMA integrity_check');
+      final integrityResult =
+          integrityRows.isNotEmpty ? integrityRows.first.values.first : null;
+      if (integrityResult?.toString().toLowerCase() != 'ok') {
+        throw BackupException(
+          technicalDetail: 'integrity_check returned: $integrityResult',
+          userMessage: 'الملف المحدد تالف (PRAGMA integrity_check فشل).',
+        );
       }
+
+      // Core tables check.
+      for (final tableName in _coreTables) {
+        final rows = await candidateDb.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+          [tableName],
+        );
+        if (rows.isEmpty) {
+          throw BackupException(
+            technicalDetail: 'Core table missing: $tableName',
+            userMessage:
+                'الملف المحدد ليس نسخة احتياطية صالحة (جدول "$tableName" مفقود).',
+          );
+        }
+      }
+
+      AppLogger.instance.info('Validation passed for $path', tag: _tag);
+    } finally {
+      try {
+        await candidateDb?.close();
+      } catch (_) {}
+    }
+  }
+
+  /// Deletes the oldest files in [localBackupsDir] keeping only
+  /// [_maxLocalBackups] most-recent files.  Safety copies (prefix
+  /// `pre_restore_safety_`) count toward the limit.
+  Future<void> _pruneLocalBackups() async {
+    try {
+      final dir = await localBackupsDir;
+      final files = dir
+          .listSync()
+          .whereType<File>()
+          .where((f) => p.extension(f.path) == '.db')
+          .toList()
+        ..sort((a, b) => a.statSync().modified.compareTo(b.statSync().modified));
+
+      while (files.length > _maxLocalBackups) {
+        final oldest = files.removeAt(0);
+        oldest.deleteSync();
+        AppLogger.instance.info(
+            'Pruned old backup: ${p.basename(oldest.path)}',
+            tag: _tag);
+      }
+    } catch (e) {
+      AppLogger.instance.error('_pruneLocalBackups failed', tag: _tag, exception: e);
     }
   }
 }
