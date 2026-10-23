@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+
 import 'package:gomaa_management/services/backup_service.dart';
 
-// States
+// ─── States ──────────────────────────────────────────────────────────────────
+
 abstract class BackupState extends Equatable {
   const BackupState();
   @override
@@ -10,14 +13,24 @@ abstract class BackupState extends Equatable {
 }
 
 class BackupInitial extends BackupState {}
+
 class BackupLoading extends BackupState {}
+
 class BackupSuccess extends BackupState {
-  final String path;
-  const BackupSuccess(this.path);
+  final String filePath;
+  final int sizeBytes;
+  final String kind; // 'local' | 'drive'
+  const BackupSuccess({
+    required this.filePath,
+    required this.sizeBytes,
+    this.kind = 'local',
+  });
   @override
-  List<Object?> get props => [path];
+  List<Object?> get props => [filePath, sizeBytes, kind];
 }
+
 class RestoreSuccess extends BackupState {}
+
 class BackupError extends BackupState {
   final String message;
   const BackupError(this.message);
@@ -25,31 +38,93 @@ class BackupError extends BackupState {
   List<Object?> get props => [message];
 }
 
-// Cubit
+// ─── Cubit ───────────────────────────────────────────────────────────────────
+
+/// [onRestoreComplete] is called after a successful restore so that the
+/// caller (Settings screen / main.dart) can reload all cubits.
 class BackupCubit extends Cubit<BackupState> {
   final BackupService _backupService;
 
-  BackupCubit({BackupService? backupService})
-      : _backupService = backupService ?? BackupService(),
+  /// Called after a successful restore. Reload ALL cubits here.
+  final VoidCallback? onRestoreComplete;
+
+  BackupCubit({
+    BackupService? backupService,
+    this.onRestoreComplete,
+  })  : _backupService = backupService ?? BackupService(),
         super(BackupInitial());
 
-  Future<void> createBackup(String destinationDir) async {
+  // ── Backup actions ──────────────────────────────────────────────────────────
+
+  /// Creates a backup, prompting the user for a folder via the OS picker.
+  /// Falls back to the local backups folder if the picker is cancelled.
+  Future<void> createBackupWithPicker() async {
+    if (isClosed) return;
     emit(BackupLoading());
     try {
-      final path = await _backupService.createBackup(destinationDir);
-      emit(BackupSuccess(path));
+      final result = await _backupService.createBackupWithPicker();
+      if (!isClosed) {
+        emit(BackupSuccess(
+          filePath: result.filePath,
+          sizeBytes: result.sizeBytes,
+          kind: 'local',
+        ));
+      }
     } catch (e) {
-      emit(BackupError(e.toString()));
+      if (!isClosed) emit(BackupError(e.toString()));
     }
   }
 
-  Future<void> restoreBackup(String backupFolderPath) async {
+  /// Creates a backup to the default local backups folder (no picker).
+  Future<void> createLocalBackup() async {
+    if (isClosed) return;
     emit(BackupLoading());
     try {
-      await _backupService.restoreBackup(backupFolderPath);
-      emit(RestoreSuccess());
+      final result = await _backupService.createBackupFile();
+      if (!isClosed) {
+        emit(BackupSuccess(
+          filePath: result.filePath,
+          sizeBytes: result.sizeBytes,
+          kind: 'local',
+        ));
+      }
     } catch (e) {
-      emit(BackupError(e.toString()));
+      if (!isClosed) emit(BackupError(e.toString()));
+    }
+  }
+
+  // ── Restore actions ─────────────────────────────────────────────────────────
+
+  /// Opens a file picker for the user to select a `.db` file, validates it,
+  /// and replaces the live database.
+  Future<void> restoreWithPicker() async {
+    if (isClosed) return;
+    emit(BackupLoading());
+    try {
+      final picked = await _backupService.restoreWithPicker();
+      if (!picked) {
+        // User cancelled — reset to initial without error.
+        if (!isClosed) emit(BackupInitial());
+        return;
+      }
+      if (!isClosed) emit(RestoreSuccess());
+      onRestoreComplete?.call();
+    } catch (e) {
+      if (!isClosed) emit(BackupError(e.toString()));
+    }
+  }
+
+  /// Restores directly from a known file path (used by legacy code path and
+  /// tests).
+  Future<void> restoreFromFile(String dbFilePath) async {
+    if (isClosed) return;
+    emit(BackupLoading());
+    try {
+      await _backupService.restoreFromFile(dbFilePath);
+      if (!isClosed) emit(RestoreSuccess());
+      onRestoreComplete?.call();
+    } catch (e) {
+      if (!isClosed) emit(BackupError(e.toString()));
     }
   }
 }

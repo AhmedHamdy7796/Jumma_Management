@@ -111,7 +111,20 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => SettingsCubit(settingsRepo)..loadSettings()),
         BlocProvider(create: (_) => AuditLogCubit(auditLogRepo)),
         BlocProvider(create: (_) => SearchCubit(searchRepo)),
-        BlocProvider(create: (_) => BackupCubit()),
+        BlocProvider(create: (ctx) => BackupCubit(
+          onRestoreComplete: () {
+            // Reload every global cubit so the UI reflects the restored data.
+            if (ctx.mounted) {
+              ctx.read<CustomerCubit>().loadCustomers();
+              ctx.read<PurchaseCubit>().loadPurchases();
+              ctx.read<FixCubit>().loadFixes();
+              ctx.read<InventoryCubit>().loadInventory();
+              ctx.read<SalesInvoiceCubit>().loadAll();
+              ctx.read<MaintenanceCubit>().loadMaintenanceData();
+              ctx.read<SettingsCubit>().loadSettings();
+            }
+          },
+        )),
         BlocProvider(create: (_) => ThemeCubit()),
       ],
       child: BlocBuilder<SettingsCubit, SettingsState>(
