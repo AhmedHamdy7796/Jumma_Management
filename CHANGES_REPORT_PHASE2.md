@@ -1,4 +1,4 @@
-﻿# CHANGES_REPORT_PHASE2.md
+# CHANGES_REPORT_PHASE2.md
 
 > Branch: `fixes/phase-2-backup`  
 > Base:   `fixes/phase-1`  
@@ -42,6 +42,31 @@
 | lib/screens/settings/settings_screen.dart | 4-tab rewrite: Company (unchanged), Local Backup (new), Google Drive (new), Users (unchanged). Reminder banner, success dialog, error dialog, Drive settings form | Items 1b, 3, 3b |
 | lib/config/google_config.example.dart | New: OAuth config template committed to git | Item 3 |
 | .gitignore | Added lib/config/google_config.dart exclusion | Item 3 |
+
+---
+
+## 3b. Table Names Verification & Comparison (Restore Validation)
+
+Comparison between tables created in `database_service.dart` (and constants in `database_constants.dart`) versus `_coreTables` checked in `backup_service.dart`:
+
+| Table Name in `database_service.dart` | Constant in `TableNames` | Checked in `_coreTables` (`backup_service.dart`) | Notes |
+|--------------------------------------|--------------------------|--------------------------------------------------|-------|
+| `customers` | `TableNames.customers` | Yes | Core table |
+| `purchases` | `TableNames.purchases` | Yes | Core table |
+| `fixes` | `TableNames.fixes` | Yes | Core table |
+| `sales_invoices` | `TableNames.salesInvoices` | Yes | Invoices (NOT `sales_invoice_items`) |
+| `inventory` | `TableNames.inventory` | Yes | Inventory items (NOT `products`; accepts legacy `equipment` for v7/v8 backups) |
+| `settings` | `TableNames.settings` | Yes | App & backup configuration |
+| `maintenance_records` | `TableNames.maintenanceRecords` | Secondary | Linked to inventory via foreign key |
+| `maintenance_schedule` | `TableNames.maintenanceSchedule` | Secondary | Linked to inventory via foreign key |
+| `notes` | `TableNames.notes` | Secondary | Entity notes |
+| `audit_logs` | `TableNames.auditLogs` | Secondary | System audit logs |
+| `users` | N/A (`'users'`) | Secondary | Auth users |
+
+### Key Clarifications on Mismatches:
+1. **`inventory` vs `products`**: The codebase defines `inventory` (`TableNames.inventory`), never `products`. `backup_service.dart` validates `TableNames.inventory`. Furthermore, if restoring an older backup from schema v7/v8 where the table was named `equipment`, `backup_service.dart` accepts `equipment` as valid because `MigrationManager.migrate()` automatically upgrades `equipment` to `inventory` upon reopening.
+2. **`sales_invoices` vs `sales_invoice_items` / `payments`**: The schema stores invoice item details and paid amounts directly within the `sales_invoices` table (`TableNames.salesInvoices`). There is no separate `sales_invoice_items` or `payments` table.
+3. **`TableNames` Constants**: `_coreTables` now directly uses the `TableNames` constants from `database_constants.dart` instead of raw strings.
 
 ---
 

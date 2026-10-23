@@ -22,11 +22,12 @@ class BackupResult {
 // ─── Core tables that must be present for a valid DB ─────────────────────────
 
 const _coreTables = [
-  'customers',
-  'purchases',
-  'sales_invoices',
-  'inventory',
-  'settings',
+  TableNames.customers,
+  TableNames.purchases,
+  TableNames.fixes,
+  TableNames.salesInvoices,
+  TableNames.inventory,
+  TableNames.settings,
 ];
 
 /// Maximum number of backup files to keep in the local backups folder.
@@ -281,6 +282,15 @@ class BackupService {
           [tableName],
         );
         if (rows.isEmpty) {
+          // Backward compatibility: v7/v8 backups used 'equipment', which
+          // is automatically migrated to 'inventory' on open by MigrationManager.
+          if (tableName == TableNames.inventory) {
+            final legacyRows = await candidateDb.rawQuery(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name='equipment'",
+            );
+            if (legacyRows.isNotEmpty) continue;
+          }
+
           throw BackupException(
             technicalDetail: 'Core table missing: $tableName',
             userMessage:
