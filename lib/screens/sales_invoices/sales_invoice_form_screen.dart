@@ -173,14 +173,18 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
     );
 
     try {
+      SalesInvoiceModel savedInvoice = invoice;
       if (_isEditing) {
         await context.read<SalesInvoiceCubit>().updateInvoice(invoice);
       } else {
-        await context.read<SalesInvoiceCubit>().addInvoice(invoice);
+        final newId = await context.read<SalesInvoiceCubit>().addInvoice(invoice);
+        if (newId != null) {
+          savedInvoice = invoice.copyWith(id: newId);
+        }
       }
       if (mounted) {
         context.read<InventoryCubit>().loadInventory();
-        Navigator.pop(context);
+        Navigator.pop(context, savedInvoice);
       }
     } catch (e) {
       if (mounted) {

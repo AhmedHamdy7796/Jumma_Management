@@ -78,36 +78,50 @@ class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
     }
   }
 
-  Future<void> addInvoice(SalesInvoiceModel invoice) async {
+  Future<int?> addInvoice(SalesInvoiceModel invoice) async {
     try {
-      await _repo.create(invoice);
+      final id = await _repo.create(invoice);
       await _reloadCurrent();
       onInventoryChanged?.call();
       onDataChanged?.call();
+      return id;
     } catch (e) {
       emit(SalesInvoiceError(e.toString()));
+      return null;
     }
   }
 
-  Future<void> updateInvoice(SalesInvoiceModel invoice) async {
+  Future<bool> updateInvoice(SalesInvoiceModel invoice) async {
     try {
-      await _repo.update(invoice);
+      final count = await _repo.update(invoice);
       await _reloadCurrent();
       onInventoryChanged?.call();
       onDataChanged?.call();
+      return count > 0;
     } catch (e) {
       emit(SalesInvoiceError(e.toString()));
+      return false;
     }
   }
 
-  Future<void> deleteInvoice(int id) async {
+  Future<bool> deleteInvoice(int id) async {
     try {
-      await _repo.delete(id);
+      final count = await _repo.delete(id);
       await _reloadCurrent();
       onInventoryChanged?.call();
       onDataChanged?.call();
+      return count > 0;
     } catch (e) {
       emit(SalesInvoiceError(e.toString()));
+      return false;
+    }
+  }
+
+  Future<SalesInvoiceModel?> getInvoiceById(int id) async {
+    try {
+      return await _repo.getById(id);
+    } catch (_) {
+      return null;
     }
   }
 
