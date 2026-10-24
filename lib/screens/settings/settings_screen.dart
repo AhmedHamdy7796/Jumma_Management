@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gomaa_management/cubits/backup/backup_cubit.dart';
 import 'package:gomaa_management/cubits/settings/settings_cubit.dart';
 import 'package:gomaa_management/database/database_constants.dart';
+import 'package:gomaa_management/database/migration_manager.dart';
 import 'package:gomaa_management/core/resources/app_colors.dart';
 import 'package:gomaa_management/core/widgets/custom_text_field.dart';
 import 'package:gomaa_management/core/widgets/custom_button.dart';
@@ -317,6 +318,72 @@ class _SettingsScreenState extends State<SettingsScreen>
               const SnackBar(content: Text('تم حفظ الإعدادات بنجاح')),
             );
           },
+        ),
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.cardDark
+                : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.darkGrey.withValues(alpha: 0.2)
+                  : Colors.grey.shade300,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Column(
+                children: const [
+                  Text(
+                    'إصدار التطبيق',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      color: AppColors.darkGrey,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '1.0.0+1',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(
+                height: 32,
+                child: VerticalDivider(),
+              ),
+              Column(
+                children: const [
+                  Text(
+                    'إصدار قاعدة البيانات',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      color: AppColors.darkGrey,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'v${MigrationManager.currentVersion}',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );

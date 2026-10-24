@@ -78,6 +78,8 @@ class DatabaseService {
       }
 
       final path = join(dir.path, _dbFileName);
+      final backupsDir = join(dir.path, 'backups');
+      await MigrationManager.createSafetyCopyBeforeUpgrade(path, backupsDir);
       AppLogger.instance.info('Opening database at: $path', tag: _tag);
 
       final db = await openDatabase(
@@ -216,6 +218,8 @@ class DatabaseService {
           id               INTEGER PRIMARY KEY AUTOINCREMENT,
           equipmentId      INTEGER NOT NULL
                            REFERENCES inventory(id) ON DELETE CASCADE,
+          customerId       INTEGER
+                           REFERENCES customers(id) ON DELETE SET NULL,
           technicianName   TEXT    NOT NULL,
           startDate        TEXT    NOT NULL,
           endDate          TEXT,
@@ -232,11 +236,44 @@ class DatabaseService {
           id              INTEGER PRIMARY KEY AUTOINCREMENT,
           equipmentId     INTEGER NOT NULL
                           REFERENCES inventory(id) ON DELETE CASCADE,
+          customerId      INTEGER
+                          REFERENCES customers(id) ON DELETE SET NULL,
           scheduledDate   TEXT    NOT NULL,
           type            TEXT    NOT NULL DEFAULT 'preventive',
           reminderEnabled INTEGER NOT NULL DEFAULT 1,
           completedAt     TEXT,
           notes           TEXT    NOT NULL DEFAULT ''
+        )
+      ''');
+
+      await txn.execute('''
+        CREATE TABLE customer_machines (
+          id               INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id      INTEGER NOT NULL
+                           REFERENCES customers(id) ON DELETE CASCADE,
+          machine_type     TEXT    NOT NULL,
+          model            TEXT    NOT NULL,
+          manufacture_year INTEGER,
+          serial_number    TEXT,
+          install_date     TEXT,
+          notes            TEXT,
+          created_at       TEXT    NOT NULL
+        )
+      ''');
+
+      await txn.execute('''
+        CREATE TABLE machine_parts (
+          id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+          machine_id                  INTEGER NOT NULL
+                                      REFERENCES customer_machines(id) ON DELETE CASCADE,
+          part_name                   TEXT    NOT NULL,
+          part_number                 TEXT,
+          replaced_date               TEXT    NOT NULL,
+          running_hours_at_replacement REAL,
+          next_due_date               TEXT,
+          cost                        REAL,
+          notes                       TEXT,
+          created_at                  TEXT    NOT NULL
         )
       ''');
 
@@ -328,6 +365,9 @@ class DatabaseService {
         'CREATE INDEX idx_maint_equipment ON maintenance_records(equipmentId)',
       );
       await txn.execute(
+        'CREATE INDEX idx_maint_customer ON maintenance_records(customerId)',
+      );
+      await txn.execute(
         'CREATE INDEX idx_maint_status ON maintenance_records(status)',
       );
       await txn.execute(
@@ -344,7 +384,32 @@ class DatabaseService {
         'ON maintenance_schedule(equipmentId)',
       );
       await txn.execute(
+        'CREATE INDEX idx_sched_customer ON maintenance_schedule(customerId)',
+      );
+      await txn.execute(
         'CREATE INDEX idx_sched_date ON maintenance_schedule(scheduledDate)',
+      );
+
+      // customer_machines
+      await txn.execute(
+        'CREATE INDEX idx_customer_machines_customer ON customer_machines(customer_id)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_customer_machines_model ON customer_machines(model)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_customer_machines_serial ON customer_machines(serial_number)',
+      );
+
+      // machine_parts
+      await txn.execute(
+        'CREATE INDEX idx_machine_parts_machine ON machine_parts(machine_id)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_machine_parts_date ON machine_parts(replaced_date)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_machine_parts_due ON machine_parts(next_due_date)',
       );
 
       // notes

@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
 import 'package:gomaa_management/core/logging/app_logger.dart';
@@ -18,7 +21,7 @@ class MigrationManager {
   /// The current schema version. Increment this every time a new migration
   /// is added. [DatabaseService] uses this as the `version` argument to
   /// [openDatabase].
-  static const int currentVersion = 9;
+  static const int currentVersion = 10;
 
   static const _tag = 'MigrationManager';
 
@@ -33,9 +36,65 @@ class MigrationManager {
     _Migration(version: 7, up: _v7AddAllNewTablesAndIndexes),
     _Migration(version: 8, up: _v8AddUsersTable),
     _Migration(version: 9, up: _v9RefactorSchema),
+    _Migration(version: 10, up: _v10AddCustomerMachinesAndParts),
   ];
 
   // ── Public API ────────────────────────────────────────────────────────────
+
+  /// Creates an automatic safety copy of the database before any upgrade runs.
+  /// Uses VACUUM INTO via a separate read-only connection before the upgrading
+  /// connection enters its upgrade transaction.
+  static Future<void> createSafetyCopyBeforeUpgrade(
+    String dbPath,
+    String backupsDirPath,
+  ) async {
+    try {
+      final dbFile = File(dbPath);
+      if (!dbFile.existsSync()) return;
+
+      final roDb = await databaseFactory.openDatabase(
+        dbPath,
+        options: OpenDatabaseOptions(readOnly: true),
+      );
+      try {
+        final res = await roDb.rawQuery('PRAGMA user_version');
+        final existingVersion = Sqflite.firstIntValue(res) ?? 0;
+
+        if (existingVersion > 0 && existingVersion < currentVersion) {
+          final dir = Directory(backupsDirPath);
+          if (!dir.existsSync()) dir.createSync(recursive: true);
+
+          final now = DateTime.now();
+          final stamp =
+              '${now.year}-${now.month.toString().padLeft(2, '0')}-'
+              '${now.day.toString().padLeft(2, '0')}_'
+              '${now.hour.toString().padLeft(2, '0')}'
+              '${now.minute.toString().padLeft(2, '0')}'
+              '${now.second.toString().padLeft(2, '0')}';
+          final safetyPath = p.join(
+            dir.path,
+            'pre_upgrade_safety_v${existingVersion}_to_v${currentVersion}_$stamp.db',
+          );
+          final safetyFile = File(safetyPath);
+          if (safetyFile.existsSync()) safetyFile.deleteSync();
+
+          await roDb.execute("VACUUM INTO '${safetyPath.replaceAll("'", "''")}'");
+          AppLogger.instance.info(
+            'Pre-upgrade safety copy created at $safetyPath',
+            tag: _tag,
+          );
+        }
+      } finally {
+        await roDb.close();
+      }
+    } catch (e) {
+      AppLogger.instance.error(
+        'Could not create safety copy before upgrade',
+        tag: _tag,
+        exception: e,
+      );
+    }
+  }
 
   /// Called by [DatabaseService] via the [onUpgrade] callback.
   ///
@@ -492,6 +551,93 @@ class MigrationManager {
     );
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_inventory_category ON inventory(category)',
+    );
+  }
+
+  // ── v10 ───────────────────────────────────────────────────────────────────
+
+  /// Adds customer_machines and machine_parts tables, customerId to maintenance
+  /// records & schedule, and corresponding indexes.
+  static Future<void> _v10AddCustomerMachinesAndParts(Database db) async {
+    // 1. customer_machines
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS customer_machines (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_id      INTEGER NOT NULL
+                         REFERENCES customers(id) ON DELETE CASCADE,
+        machine_type     TEXT    NOT NULL,
+        model            TEXT    NOT NULL,
+        manufacture_year INTEGER,
+        serial_number    TEXT,
+        install_date     TEXT,
+        notes            TEXT,
+        created_at       TEXT    NOT NULL
+      )
+    ''');
+
+    // 2. machine_parts
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS machine_parts (
+        id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+        machine_id                  INTEGER NOT NULL
+                                    REFERENCES customer_machines(id) ON DELETE CASCADE,
+        part_name                   TEXT    NOT NULL,
+        part_number                 TEXT,
+        replaced_date               TEXT    NOT NULL,
+        running_hours_at_replacement REAL,
+        next_due_date               TEXT,
+        cost                        REAL,
+        notes                       TEXT,
+        created_at                  TEXT    NOT NULL
+      )
+    ''');
+
+    // 3. maintenance_records: add customerId column if missing
+    final recordCols =
+        await db.rawQuery('PRAGMA table_info(maintenance_records)');
+    final hasCustomerInRecords =
+        recordCols.any((c) => c['name'] == 'customerId');
+    if (!hasCustomerInRecords) {
+      await db.execute(
+        'ALTER TABLE maintenance_records ADD COLUMN customerId INTEGER REFERENCES customers(id) ON DELETE SET NULL',
+      );
+    }
+
+    // 4. maintenance_schedule: add customerId column if missing
+    final schedCols =
+        await db.rawQuery('PRAGMA table_info(maintenance_schedule)');
+    final hasCustomerInSched =
+        schedCols.any((c) => c['name'] == 'customerId');
+    if (!hasCustomerInSched) {
+      await db.execute(
+        'ALTER TABLE maintenance_schedule ADD COLUMN customerId INTEGER REFERENCES customers(id) ON DELETE SET NULL',
+      );
+    }
+
+    // 5. Indexes
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_machines_customer ON customer_machines(customer_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_machines_model ON customer_machines(model)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_machines_serial ON customer_machines(serial_number)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_machine_parts_machine ON machine_parts(machine_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_machine_parts_date ON machine_parts(replaced_date)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_machine_parts_due ON machine_parts(next_due_date)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_maint_customer ON maintenance_records(customerId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sched_customer ON maintenance_schedule(customerId)',
     );
   }
 }

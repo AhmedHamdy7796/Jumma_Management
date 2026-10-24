@@ -18,6 +18,8 @@ abstract final class TableNames {
   static const String salesInvoices = 'sales_invoices';
   static const String maintenanceRecords = 'maintenance_records';
   static const String maintenanceSchedule = 'maintenance_schedule';
+  static const String customerMachines = 'customer_machines';
+  static const String machineParts = 'machine_parts';
   static const String notes = 'notes';
   static const String settings = 'settings';
   static const String auditLogs = 'audit_logs';
@@ -112,6 +114,7 @@ abstract final class SalesInvoiceColumns {
 abstract final class MaintenanceRecordColumns {
   static const String id = 'id';
   static const String equipmentId = 'equipmentId';
+  static const String customerId = 'customerId';
   static const String technicianName = 'technicianName';
   static const String startDate = 'startDate';
   static const String endDate = 'endDate';
@@ -129,11 +132,45 @@ abstract final class MaintenanceRecordColumns {
 abstract final class MaintenanceScheduleColumns {
   static const String id = 'id';
   static const String equipmentId = 'equipmentId';
+  static const String customerId = 'customerId';
   static const String scheduledDate = 'scheduledDate';
   static const String type = 'type';
   static const String reminderEnabled = 'reminderEnabled';
   static const String completedAt = 'completedAt';
   static const String notes = 'notes';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Column Names — Customer Machines
+// ─────────────────────────────────────────────────────────────────────────────
+
+abstract final class CustomerMachineColumns {
+  static const String id = 'id';
+  static const String customerId = 'customer_id';
+  static const String machineType = 'machine_type';
+  static const String model = 'model';
+  static const String manufactureYear = 'manufacture_year';
+  static const String serialNumber = 'serial_number';
+  static const String installDate = 'install_date';
+  static const String notes = 'notes';
+  static const String createdAt = 'created_at';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Column Names — Machine Parts
+// ─────────────────────────────────────────────────────────────────────────────
+
+abstract final class MachinePartColumns {
+  static const String id = 'id';
+  static const String machineId = 'machine_id';
+  static const String partName = 'part_name';
+  static const String partNumber = 'part_number';
+  static const String replacedDate = 'replaced_date';
+  static const String runningHoursAtReplacement = 'running_hours_at_replacement';
+  static const String nextDueDate = 'next_due_date';
+  static const String cost = 'cost';
+  static const String notes = 'notes';
+  static const String createdAt = 'created_at';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -256,5 +293,7 @@ abstract final class AuditEntityType {
   static const String inventory = 'inventory';
   static const String salesInvoice = 'sales_invoice';
   static const String maintenanceRecord = 'maintenance_record';
+  static const String customerMachine = 'customer_machine';
+  static const String machinePart = 'machine_part';
   static const String system = 'system';
 }
