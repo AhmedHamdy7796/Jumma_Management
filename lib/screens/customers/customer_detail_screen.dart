@@ -15,6 +15,7 @@ import 'customer_form_screen.dart';
 import '../sales_invoices/sales_invoice_form_screen.dart';
 import '../sales_invoices/sales_invoice_detail_screen.dart';
 import '../machines/machine_form_dialog.dart';
+import '../machines/machine_detail_screen.dart';
 
 class CustomerDetailScreen extends StatelessWidget {
   final CustomerModel customer;
@@ -497,7 +498,15 @@ class _CustomerDetailView extends StatelessWidget {
       elevation: 2,
       child: InkWell(
         onTap: () {
-          // Navigates to MachineDetailScreen (Item 3)
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MachineDetailScreen(
+                machine: machine,
+                customerName: customer.name,
+              ),
+            ),
+          );
         },
         borderRadius: BorderRadius.circular(14),
         child: Padding(
