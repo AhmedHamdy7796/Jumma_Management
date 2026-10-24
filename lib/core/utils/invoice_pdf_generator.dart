@@ -1,60 +1,105 @@
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:gomaa_management/core/utils/invoice_calculator.dart';
+import 'package:gomaa_management/database/database_constants.dart';
 import 'package:gomaa_management/models/sales_invoice_model.dart';
+import 'package:gomaa_management/repositories/settings_repository.dart';
 
 /// Generates and prints a professional Arabic invoice PDF
-/// matching the company template design.
+/// using company settings, dynamic totals, and Arabic font caching.
 class InvoicePdfGenerator {
-  // Brand colours matching the design template
+  InvoicePdfGenerator._();
+
+  // Brand colours matching company aesthetic
   static const _headerBg = PdfColor.fromInt(0xFF1A2B4A); // dark navy
   static const _gold = PdfColor.fromInt(0xFFB8972E);
-  static const _lightBg = PdfColor.fromInt(0xFFF5F0E8); // warm cream
-  static const _tableLine = PdfColor.fromInt(0xFFE0D8C8);
+  static const _lightBg = PdfColor.fromInt(0xFFF9F7F4); // warm cream
+  static const _tableLine = PdfColor.fromInt(0xFFE2DDD5);
   static const _bodyText = PdfColor.fromInt(0xFF2C2C2C);
-  static const _grey = PdfColor.fromInt(0xFF888888);
+  static const _grey = PdfColor.fromInt(0xFF777777);
+  static const _alertRed = PdfColor.fromInt(0xFFD32F2F);
+  static const _successGreen = PdfColor.fromInt(0xFF2E7D32);
 
-  /// Prints the invoice using the system print dialog.
+  // Cached fonts for rapid rendering without re-fetching
+  static pw.Font? _cachedRegular;
+  static pw.Font? _cachedBold;
+
+  /// Loads Arabic fonts once and keeps them cached in memory.
+  static Future<void> preloadFonts() async {
+    try {
+      _cachedRegular ??= await PdfGoogleFonts.cairoRegular();
+      _cachedBold ??= await PdfGoogleFonts.cairoBold();
+    } catch (_) {
+      // Cairo fallback handled during generation
+    }
+  }
+
+  /// Prints or previews the invoice using the system print dialog.
   static Future<void> printInvoice({
     required SalesInvoiceModel invoice,
-    String companyName = 'مؤسسة جمعة للاستيراد والتصدير',
-    String companyLogoAsset = 'assets/images/logo.png',
+    Map<String, String>? settings,
   }) async {
+    // 1. Fetch settings if not provided
+    final resolvedSettings = settings ??
+        await SettingsRepository().getAllSettings().catchError((_) => <String, String>{});
+
+    // 2. Build the PDF document
     final doc = await _buildDocument(
       invoice: invoice,
-      companyName: companyName,
-      companyLogoAsset: companyLogoAsset,
+      settings: resolvedSettings,
     );
 
+    // 3. Hand off to system printing
     await Printing.layoutPdf(
       onLayout: (_) async => doc.save(),
-      name: 'فاتورة_${invoice.id ?? 0}_${invoice.customerName}',
+      name: 'فاتورة_${invoice.id ?? 0}_${invoice.customerName.replaceAll(' ', '_')}',
     );
   }
 
   static Future<pw.Document> _buildDocument({
     required SalesInvoiceModel invoice,
-    required String companyName,
-    required String companyLogoAsset,
+    required Map<String, String> settings,
   }) async {
     final doc = pw.Document();
 
-    // Load Arabic font (Amiri supports full Arabic text in PDF)
-    final arabicFont = await PdfGoogleFonts.cairoRegular();
-    final arabicBold = await PdfGoogleFonts.cairoBold();
+    // Ensure fonts are loaded
+    await preloadFonts();
+    final arabicFont = _cachedRegular ?? pw.Font.helvetica();
+    final arabicBold = _cachedBold ?? pw.Font.helveticaBold();
 
-    // Try loading logo — silently fall back to icon if asset missing
+    // Company Settings from database
+    final companyName = (settings[SettingsKeys.companyName]?.trim().isNotEmpty == true)
+        ? settings[SettingsKeys.companyName]!.trim()
+        : 'مؤسسة جمعة';
+    final companyPhone = settings[SettingsKeys.companyPhone]?.trim() ?? '';
+    final companyAddress = settings[SettingsKeys.companyAddress]?.trim() ?? '';
+    final customLogoPath = settings[SettingsKeys.companyLogoPath]?.trim();
+
+    // Try loading logo: custom file first, then asset fallback
     pw.ImageProvider? logoImage;
-    try {
-      final logoData = await rootBundle.load(companyLogoAsset);
-      logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
-    } catch (_) {
-      logoImage = null;
+    if (customLogoPath != null && customLogoPath.isNotEmpty) {
+      try {
+        final file = File(customLogoPath);
+        if (file.existsSync()) {
+          logoImage = pw.MemoryImage(await file.readAsBytes());
+        }
+      } catch (_) {
+        logoImage = null;
+      }
+    }
+    if (logoImage == null) {
+      try {
+        final logoData = await rootBundle.load('assets/images/logo.png');
+        logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+      } catch (_) {
+        logoImage = null;
+      }
     }
 
-    final invoiceNumber =
-        (invoice.id ?? 0).toString().padLeft(4, '0');
+    final invoiceNumber = (invoice.id ?? 0).toString().padLeft(4, '0');
     final dateStr = _formatDate(invoice.date);
 
     doc.addPage(
@@ -66,7 +111,7 @@ class InvoicePdfGenerator {
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
             // ── Header ─────────────────────────────────────────────────
-            _buildHeader(companyName, logoImage, arabicFont, arabicBold),
+            _buildHeader(companyName, companyPhone, companyAddress, logoImage, arabicFont, arabicBold),
 
             // ── Gold separator ──────────────────────────────────────────
             pw.Container(height: 4, color: _gold),
@@ -75,12 +120,11 @@ class InvoicePdfGenerator {
             pw.Expanded(
               child: pw.Container(
                 color: _lightBg,
-                padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 32, vertical: 20),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 20),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                   children: [
-                    // Invoice info + customer info side by side
+                    // Invoice metadata & customer metadata
                     _buildInfoSection(
                       invoice,
                       invoiceNumber,
@@ -89,35 +133,35 @@ class InvoicePdfGenerator {
                       arabicBold,
                     ),
 
-                    pw.SizedBox(height: 20),
+                    pw.SizedBox(height: 18),
 
                     // Items table
                     _buildItemsTable(invoice, arabicFont, arabicBold),
 
                     pw.SizedBox(height: 16),
 
-                    // Total row
-                    _buildTotalRow(invoice, arabicFont, arabicBold),
+                    // Financial summary block: Total, Paid, Remaining
+                    _buildFinancialSummaryBlock(invoice, arabicFont, arabicBold),
 
-                    pw.SizedBox(height: 20),
-
-                    // Notes
+                    // Notes (if present)
                     if (invoice.notes.isNotEmpty) ...[
+                      pw.SizedBox(height: 16),
                       _buildNotesSection(invoice, arabicFont, arabicBold),
-                      pw.SizedBox(height: 20),
                     ],
+
+                    pw.Spacer(),
 
                     // Signatures
                     _buildSignatureRow(arabicFont),
 
-                    pw.Spacer(),
+                    pw.SizedBox(height: 12),
                   ],
                 ),
               ),
             ),
 
             // ── Footer ──────────────────────────────────────────────────
-            _buildFooter(arabicBold),
+            _buildFooter(companyAddress, companyPhone, arabicFont, arabicBold),
           ],
         ),
       ),
@@ -129,43 +173,78 @@ class InvoicePdfGenerator {
   // ─────────────────────────────────────────── Header ──
   static pw.Widget _buildHeader(
     String companyName,
+    String companyPhone,
+    String companyAddress,
     pw.ImageProvider? logoImage,
     pw.Font arabicFont,
     pw.Font arabicBold,
   ) {
     return pw.Container(
       color: _headerBg,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 20),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
-          // "فاتورة" label on the left (RTL → displayed on right visually)
-          pw.Text(
-            'فاتورة',
-            textDirection: pw.TextDirection.rtl,
-            style: pw.TextStyle(
-              font: arabicBold,
-              fontSize: 28,
-              color: PdfColors.white,
-            ),
-          ),
-          // Company name + logo
-          pw.Row(
+          // "فاتورة مبيعات" label
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                companyName,
+                'فاتورة مبيعات',
                 textDirection: pw.TextDirection.rtl,
                 style: pw.TextStyle(
                   font: arabicBold,
-                  fontSize: 18,
+                  fontSize: 26,
                   color: PdfColors.white,
                 ),
+              ),
+              pw.Text(
+                'SALES INVOICE',
+                style: pw.TextStyle(
+                  font: arabicFont,
+                  fontSize: 10,
+                  color: _gold,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
+          ),
+
+          // Company info + Logo
+          pw.Row(
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Text(
+                    companyName,
+                    textDirection: pw.TextDirection.rtl,
+                    style: pw.TextStyle(
+                      font: arabicBold,
+                      fontSize: 17,
+                      color: PdfColors.white,
+                    ),
+                  ),
+                  if (companyPhone.isNotEmpty) ...[
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'هاتف: $companyPhone',
+                      textDirection: pw.TextDirection.rtl,
+                      style: pw.TextStyle(
+                        font: arabicFont,
+                        fontSize: 10,
+                        color: PdfColors.white,
+                      ),
+                    ),
+                  ],
+                ],
               ),
               pw.SizedBox(width: 12),
               if (logoImage != null)
                 pw.Container(
-                  width: 48,
-                  height: 48,
+                  width: 50,
+                  height: 50,
                   decoration: pw.BoxDecoration(
                     border: pw.Border.all(color: _gold, width: 2),
                     shape: pw.BoxShape.circle,
@@ -174,8 +253,8 @@ class InvoicePdfGenerator {
                 )
               else
                 pw.Container(
-                  width: 48,
-                  height: 48,
+                  width: 50,
+                  height: 50,
                   decoration: pw.BoxDecoration(
                     border: pw.Border.all(color: _gold, width: 2),
                     shape: pw.BoxShape.circle,
@@ -186,7 +265,7 @@ class InvoicePdfGenerator {
                       'ج',
                       style: pw.TextStyle(
                         font: arabicBold,
-                        fontSize: 22,
+                        fontSize: 24,
                         color: _headerBg,
                       ),
                     ),
@@ -210,53 +289,46 @@ class InvoicePdfGenerator {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        // Customer info (right side in RTL)
+        // Customer info
         pw.Expanded(
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
-              pw.Text('فاتورة إلى',
+              pw.Text('بيانات العميل',
                   textDirection: pw.TextDirection.rtl,
-                  style: pw.TextStyle(
-                      font: arabicBold, fontSize: 12, color: _gold)),
+                  style: pw.TextStyle(font: arabicBold, fontSize: 11, color: _gold)),
               pw.Divider(color: _gold, thickness: 0.8),
-              pw.SizedBox(height: 6),
+              pw.SizedBox(height: 4),
               pw.Text(
-                invoice.customerName.isNotEmpty
-                    ? invoice.customerName
-                    : '─────────────────',
+                invoice.customerName.isNotEmpty ? invoice.customerName : 'عميل نقدي',
                 textDirection: pw.TextDirection.rtl,
-                style: pw.TextStyle(
-                    font: arabicBold, fontSize: 13, color: _bodyText),
+                style: pw.TextStyle(font: arabicBold, fontSize: 13, color: _bodyText),
               ),
-              pw.SizedBox(height: 6),
-              _infoLabelRow('العنوان',
-                  invoice.customerAddress.isNotEmpty
-                      ? invoice.customerAddress
-                      : '──────────────────────',
-                  arabicFont),
+              if (invoice.customerAddress.isNotEmpty) ...[
+                pw.SizedBox(height: 3),
+                _infoLabelRow('العنوان', invoice.customerAddress, arabicFont),
+              ],
             ],
           ),
         ),
 
-        pw.SizedBox(width: 40),
+        pw.SizedBox(width: 32),
 
-        // Invoice details (left side in RTL)
+        // Invoice metadata
         pw.Expanded(
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
-              pw.Text('تفاصيل الفاتورة',
+              pw.Text('بيانات الفاتورة',
                   textDirection: pw.TextDirection.rtl,
-                  style: pw.TextStyle(
-                      font: arabicBold, fontSize: 12, color: _gold)),
+                  style: pw.TextStyle(font: arabicBold, fontSize: 11, color: _gold)),
               pw.Divider(color: _gold, thickness: 0.8),
-              pw.SizedBox(height: 6),
-              _infoLabelRow('رقم الفاتورة', invoiceNumber, arabicFont),
               pw.SizedBox(height: 4),
-              _infoLabelRow('التاريخ', dateStr, arabicFont),
+              _infoLabelRow('رقم الفاتورة', '#$invoiceNumber', arabicBold),
+              pw.SizedBox(height: 3),
+              _infoLabelRow('تاريخ الفاتورة', dateStr, arabicFont),
               if (invoice.model.isNotEmpty) ...[
-                pw.SizedBox(height: 4),
+                pw.SizedBox(height: 3),
                 _infoLabelRow('الموديل', invoice.model, arabicFont),
               ],
             ],
@@ -267,19 +339,20 @@ class InvoicePdfGenerator {
   }
 
   static pw.Widget _infoLabelRow(
-      String label, String value, pw.Font arabicFont) {
+    String label,
+    String value,
+    pw.Font font,
+  ) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.end,
       children: [
         pw.Text(value,
             textDirection: pw.TextDirection.rtl,
-            style:
-                pw.TextStyle(font: arabicFont, fontSize: 11, color: _bodyText)),
-        pw.SizedBox(width: 8),
+            style: pw.TextStyle(font: font, fontSize: 11, color: _bodyText)),
+        pw.SizedBox(width: 6),
         pw.Text('$label :',
             textDirection: pw.TextDirection.rtl,
-            style:
-                pw.TextStyle(font: arabicFont, fontSize: 11, color: _grey)),
+            style: pw.TextStyle(font: font, fontSize: 11, color: _grey)),
       ],
     );
   }
@@ -290,41 +363,38 @@ class InvoicePdfGenerator {
     pw.Font arabicFont,
     pw.Font arabicBold,
   ) {
-    const headers = ['المجموع', 'العدد', 'سعر القطعة', 'اسم الصنف', 'م'];
+    const headers = ['الإجمالي', 'الكمية', 'سعر الوحدة', 'اسم الصنف والموديل', 'م'];
     final colWidths = [
-      pw.FlexColumnWidth(1.5),
-      pw.FlexColumnWidth(1),
-      pw.FlexColumnWidth(1.5),
-      pw.FlexColumnWidth(3),
-      pw.FlexColumnWidth(0.5),
+      const pw.FlexColumnWidth(1.5),
+      const pw.FlexColumnWidth(0.9),
+      const pw.FlexColumnWidth(1.4),
+      const pw.FlexColumnWidth(3.2),
+      const pw.FlexColumnWidth(0.6),
     ];
 
-    // Build 7 rows (first row has data, rest are empty like the template)
     final rows = <pw.TableRow>[];
 
     // Data row
+    final lineTotal = InvoiceCalculator.roundMoney(invoice.price * invoice.quantity);
+    final itemDisplayName = invoice.itemName +
+        (invoice.model.isNotEmpty ? ' (${invoice.model})' : '');
+
     rows.add(pw.TableRow(
       decoration: const pw.BoxDecoration(color: PdfColors.white),
       children: [
-        _tableCell(invoice.totalAmount.toStringAsFixed(2), arabicFont,
-            italic: true),
-        _tableCell(invoice.quantity.toString(), arabicFont, italic: true),
-        _tableCell(invoice.price.toStringAsFixed(2), arabicFont, italic: true),
-        _tableCell(
-            invoice.itemName +
-                (invoice.model.isNotEmpty ? ' - موديل ${invoice.model}' : ''),
-            arabicFont,
-            italic: true),
+        _tableCell(InvoiceCalculator.formatMoney(lineTotal), arabicBold),
+        _tableCell(invoice.quantity.toString(), arabicFont),
+        _tableCell(InvoiceCalculator.formatMoney(invoice.price), arabicFont),
+        _tableCell(itemDisplayName, arabicBold),
         _tableCell('1', arabicFont),
       ],
     ));
 
-    // Empty rows (2..7)
-    for (int i = 2; i <= 7; i++) {
+    // Pad with empty rows to keep the aesthetic clean like formal printed vouchers
+    for (int i = 2; i <= 5; i++) {
       rows.add(pw.TableRow(
         decoration: pw.BoxDecoration(
-          color:
-              i.isEven ? const PdfColor.fromInt(0xFFF9F5EE) : PdfColors.white,
+          color: i.isEven ? const PdfColor.fromInt(0xFFFAF7F2) : PdfColors.white,
         ),
         children: [
           _tableCell('', arabicFont),
@@ -337,7 +407,7 @@ class InvoicePdfGenerator {
     }
 
     return pw.Table(
-      border: pw.TableBorder.all(color: _tableLine, width: 0.5),
+      border: pw.TableBorder.all(color: _tableLine, width: 0.6),
       columnWidths: {
         0: colWidths[0],
         1: colWidths[1],
@@ -346,12 +416,9 @@ class InvoicePdfGenerator {
         4: colWidths[4],
       },
       children: [
-        // Header row
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: _headerBg),
-          children: headers
-              .map((h) => _tableHeader(h, arabicBold))
-              .toList(),
+          children: headers.map((h) => _tableHeader(h, arabicBold)).toList(),
         ),
         ...rows,
       ],
@@ -360,75 +427,117 @@ class InvoicePdfGenerator {
 
   static pw.Widget _tableHeader(String text, pw.Font arabicBold) {
     return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+      child: pw.Text(
+        text,
+        textDirection: pw.TextDirection.rtl,
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(font: arabicBold, fontSize: 10, color: PdfColors.white),
+      ),
+    );
+  }
+
+  static pw.Widget _tableCell(String text, pw.Font font) {
+    return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       child: pw.Text(
         text,
         textDirection: pw.TextDirection.rtl,
         textAlign: pw.TextAlign.center,
-        style: pw.TextStyle(
-            font: arabicBold, fontSize: 11, color: PdfColors.white),
+        style: pw.TextStyle(font: font, fontSize: 10, color: _bodyText),
       ),
     );
   }
 
-  static pw.Widget _tableCell(String text, pw.Font arabicFont,
-      {bool italic = false}) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-      child: pw.Text(
-        text,
-        textDirection: pw.TextDirection.rtl,
-        textAlign: pw.TextAlign.center,
-        style: pw.TextStyle(
-          font: arabicFont,
-          fontSize: 11,
-          color: italic ? _grey : _bodyText,
-          fontStyle: italic ? pw.FontStyle.italic : pw.FontStyle.normal,
-        ),
-      ),
-    );
-  }
-
-  // ──────────────────────────────────────── Total row ──
-  static pw.Widget _buildTotalRow(
+  // ──────────────────────────── Financial Summary Block ──
+  static pw.Widget _buildFinancialSummaryBlock(
     SalesInvoiceModel invoice,
     pw.Font arabicFont,
     pw.Font arabicBold,
   ) {
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.end,
-      children: [
-        pw.Container(
-          padding:
-              const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          decoration: pw.BoxDecoration(
-            color: _headerBg,
-            borderRadius: pw.BorderRadius.circular(8),
-          ),
-          child: pw.Text(
-            invoice.totalAmount.toStringAsFixed(2),
-            textDirection: pw.TextDirection.rtl,
-            style: pw.TextStyle(
-                font: arabicBold, fontSize: 14, color: PdfColors.white),
-          ),
+    final hasRemaining = invoice.remainingBalance > 0;
+    final isOverpaid = InvoiceCalculator.isOverpaid(
+      totalAmount: invoice.totalAmount,
+      paid: invoice.paidAmount,
+    );
+    final overpaidAmount = InvoiceCalculator.overpaidAmount(
+      totalAmount: invoice.totalAmount,
+      paid: invoice.paidAmount,
+    );
+
+    return pw.Align(
+      alignment: pw.Alignment.centerRight,
+      child: pw.Container(
+        width: 260,
+        padding: const pw.EdgeInsets.all(12),
+        decoration: pw.BoxDecoration(
+          color: PdfColors.white,
+          borderRadius: pw.BorderRadius.circular(8),
+          border: pw.Border.all(color: _tableLine, width: 0.8),
         ),
-        pw.SizedBox(width: 8),
-        pw.Container(
-          padding:
-              const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          decoration: pw.BoxDecoration(
-            color: _headerBg,
-            borderRadius: pw.BorderRadius.circular(8),
-          ),
-          child: pw.Text(
-            'الإجمالي',
-            textDirection: pw.TextDirection.rtl,
-            style: pw.TextStyle(
-                font: arabicBold, fontSize: 14, color: PdfColors.white),
-          ),
+        child: pw.Column(
+          children: [
+            _financialSummaryRow('الإجمالي', InvoiceCalculator.formatMoney(invoice.totalAmount), arabicBold, _headerBg),
+            pw.SizedBox(height: 6),
+            _financialSummaryRow('المدفوع', InvoiceCalculator.formatMoney(invoice.paidAmount), arabicFont, _successGreen),
+            pw.Divider(color: _tableLine, thickness: 0.6),
+            _financialSummaryRow(
+              'المتبقي',
+              InvoiceCalculator.formatMoney(invoice.remainingBalance),
+              arabicBold,
+              hasRemaining ? _alertRed : _successGreen,
+              isHighlighted: hasRemaining,
+            ),
+            if (isOverpaid) ...[
+              pw.SizedBox(height: 4),
+              _financialSummaryRow(
+                'رصيد دائن (overpayment)',
+                InvoiceCalculator.formatMoney(overpaidAmount),
+                arabicBold,
+                PdfColors.purple,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  static pw.Widget _financialSummaryRow(
+    String label,
+    String value,
+    pw.Font font,
+    PdfColor color, {
+    bool isHighlighted = false,
+  }) {
+    final content = pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Text(
+          value,
+          textDirection: pw.TextDirection.rtl,
+          style: pw.TextStyle(font: font, fontSize: isHighlighted ? 12 : 11, color: color),
+        ),
+        pw.Text(
+          label,
+          textDirection: pw.TextDirection.rtl,
+          style: pw.TextStyle(font: font, fontSize: 11, color: _bodyText),
         ),
       ],
     );
+
+    if (isHighlighted) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: pw.BoxDecoration(
+          color: const PdfColor.fromInt(0xFFFDE8E8),
+          borderRadius: pw.BorderRadius.circular(4),
+          border: pw.Border.all(color: _alertRed, width: 0.8),
+        ),
+        child: content,
+      );
+    }
+    return content;
   }
 
   // ─────────────────────────────────────────── Notes ──
@@ -440,23 +549,22 @@ class InvoicePdfGenerator {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
-        pw.Text('ملاحظات',
+        pw.Text('ملاحظات الفاتورة',
             textDirection: pw.TextDirection.rtl,
-            style:
-                pw.TextStyle(font: arabicBold, fontSize: 12, color: _gold)),
-        pw.SizedBox(height: 6),
+            style: pw.TextStyle(font: arabicBold, fontSize: 10, color: _gold)),
+        pw.SizedBox(height: 4),
         pw.Container(
           width: double.infinity,
-          padding: const pw.EdgeInsets.all(12),
+          padding: const pw.EdgeInsets.all(10),
           decoration: pw.BoxDecoration(
-            border: pw.Border.all(
-                color: _tableLine, width: 1, style: pw.BorderStyle.dashed),
+            color: PdfColors.white,
+            border: pw.Border.all(color: _tableLine, width: 0.8),
             borderRadius: pw.BorderRadius.circular(6),
           ),
           child: pw.Text(
             invoice.notes,
             textDirection: pw.TextDirection.rtl,
-            style: pw.TextStyle(font: arabicFont, fontSize: 11),
+            style: pw.TextStyle(font: arabicFont, fontSize: 10, color: _bodyText),
           ),
         ),
       ],
@@ -468,8 +576,8 @@ class InvoicePdfGenerator {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        _signatureBlock('ختم المؤسسة', arabicFont),
-        _signatureBlock('توقيع المسؤول', arabicFont),
+        _signatureBlock('توقيع المستلم', arabicFont),
+        _signatureBlock('توقيع وختم الإدارة', arabicFont),
       ],
     );
   }
@@ -478,34 +586,50 @@ class InvoicePdfGenerator {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
-        pw.SizedBox(height: 32),
-        pw.Container(width: 140, height: 0.8, color: _bodyText),
+        pw.Container(width: 140, height: 0.8, color: _grey),
         pw.SizedBox(height: 4),
-        pw.Text(label,
-            textDirection: pw.TextDirection.rtl,
-            style: pw.TextStyle(
-                font: arabicFont, fontSize: 10, color: _grey)),
+        pw.Text(
+          label,
+          textDirection: pw.TextDirection.rtl,
+          style: pw.TextStyle(font: arabicFont, fontSize: 9, color: _grey),
+        ),
       ],
     );
   }
 
   // ─────────────────────────────────────────── Footer ──
-  static pw.Widget _buildFooter(pw.Font arabicBold) {
+  static pw.Widget _buildFooter(
+    String address,
+    String phone,
+    pw.Font arabicFont,
+    pw.Font arabicBold,
+  ) {
+    final details = <String>[];
+    if (address.isNotEmpty) details.add(address);
+    if (phone.isNotEmpty) details.add('هاتف: $phone');
+
     return pw.Container(
       color: _headerBg,
-      padding: const pw.EdgeInsets.symmetric(vertical: 14, horizontal: 32),
-      child: pw.Center(
-        child: pw.Text(
-          'مع خالص الشكر لتعاملكم معنا',
-          textDirection: pw.TextDirection.rtl,
-          style: pw.TextStyle(
-              font: arabicBold, fontSize: 13, color: PdfColors.white),
-        ),
+      padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 32),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'شكراً لتعاملكم معنا',
+            textDirection: pw.TextDirection.rtl,
+            style: pw.TextStyle(font: arabicBold, fontSize: 10, color: PdfColors.white),
+          ),
+          if (details.isNotEmpty)
+            pw.Text(
+              details.join('  •  '),
+              textDirection: pw.TextDirection.rtl,
+              style: pw.TextStyle(font: arabicFont, fontSize: 9, color: PdfColors.white),
+            ),
+        ],
       ),
     );
   }
 
-  // ─────────────────────────────── Helpers ──
   static String _formatDate(DateTime date) {
     return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
   }
