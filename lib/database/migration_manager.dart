@@ -21,7 +21,7 @@ class MigrationManager {
   /// The current schema version. Increment this every time a new migration
   /// is added. [DatabaseService] uses this as the `version` argument to
   /// [openDatabase].
-  static const int currentVersion = 10;
+  static const int currentVersion = 11;
 
   static const _tag = 'MigrationManager';
 
@@ -37,6 +37,7 @@ class MigrationManager {
     _Migration(version: 8, up: _v8AddUsersTable),
     _Migration(version: 9, up: _v9RefactorSchema),
     _Migration(version: 10, up: _v10AddCustomerMachinesAndParts),
+    _Migration(version: 11, up: _v11AddInvoiceCompositeIndexes),
   ];
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -647,6 +648,17 @@ class MigrationManager {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_machine_parts_due ON machine_parts(next_due_date)',
     );
+  }
+
+  static Future<void> _v11AddInvoiceCompositeIndexes(Database db) async {
+    AppLogger.instance.info('Applying migration v11: invoice composite performance indexes...', tag: _tag);
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sales_cust_remaining ON sales_invoices(customerId, remainingBalance)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sales_item ON sales_invoices(itemName)',
+    );
+    AppLogger.instance.info('Migration v11 applied successfully.', tag: _tag);
   }
 }
 

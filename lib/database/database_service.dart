@@ -343,6 +343,12 @@ class DatabaseService {
       await txn.execute(
         'CREATE INDEX idx_sales_date ON sales_invoices(date)',
       );
+      await txn.execute(
+        'CREATE INDEX idx_sales_cust_remaining ON sales_invoices(customerId, remainingBalance)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_sales_item ON sales_invoices(itemName)',
+      );
 
       // inventory
       await txn.execute(

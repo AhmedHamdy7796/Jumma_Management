@@ -331,7 +331,42 @@ class _CustomerDetailView extends StatelessWidget {
                 return const Center(child: CircularProgressIndicator());
               }
               if (state is SalesInvoiceError) {
-                return Center(child: Text(state.message));
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'حدث خطأ أثناء تحميل الفواتير',
+                          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          state.message,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppColors.darkGrey),
+                        ),
+                        const SizedBox(height: 14),
+                        ElevatedButton.icon(
+                          onPressed: () => context
+                              .read<SalesInvoiceCubit>()
+                              .loadForCustomer(customer.id!),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('إعادة المحاولة',
+                              style: TextStyle(fontFamily: 'Cairo')),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
               }
               if (state is SalesInvoiceLoaded && state.invoices.isEmpty) {
                 return const Center(

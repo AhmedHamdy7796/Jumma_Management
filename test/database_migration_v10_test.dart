@@ -169,7 +169,7 @@ void main() {
       expect(backupDirObj.existsSync(), isTrue);
       final backupFiles = backupDirObj.listSync().whereType<File>().toList();
       expect(backupFiles.isNotEmpty, isTrue);
-      expect(backupFiles.first.path.contains('pre_upgrade_safety_v9_to_v10'), isTrue);
+      expect(backupFiles.first.path.contains('pre_upgrade_safety_v9_to_v'), isTrue);
 
       // 3. Perform upgrade to v10
       db = await openDatabase(

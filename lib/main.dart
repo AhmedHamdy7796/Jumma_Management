@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -44,6 +45,57 @@ void main() async {
 
   // Initialize daily file logger first
   await AppLogger.instance.initialize();
+
+  // Global safety net: Log errors to rotating log file and provide friendly UI fallback
+  FlutterError.onError = (FlutterErrorDetails details) {
+    AppLogger.instance.error(
+      'FlutterError: ${details.exceptionAsString()}',
+      tag: 'GlobalSafetyNet',
+      exception: details.exception,
+    );
+  };
+
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    AppLogger.instance.error(
+      'PlatformDispatcher error: $error',
+      tag: 'GlobalSafetyNet',
+      exception: error,
+    );
+    return true;
+  };
+
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: Colors.white,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.warning_amber_rounded, size: 56, color: Colors.amber),
+              SizedBox(height: 12),
+              Text(
+                'عذراً، حدث خطأ غير متوقع في العرض',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 6),
+              Text(
+                'تم تسجيل الخطأ في السجل تلقائياً.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  };
 
   await _initializeDesktop();
 
