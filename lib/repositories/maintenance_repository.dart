@@ -25,12 +25,13 @@ class MaintenanceRepository implements IMaintenanceRepository {
   Future<List<MaintenanceRecordModel>> getRecordsForEquipment(int equipmentId) async {
     try {
       final db = await _dbService.database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        TableNames.maintenanceRecords,
-        where: '${MaintenanceRecordColumns.equipmentId} = ?',
-        whereArgs: [equipmentId],
-        orderBy: '${MaintenanceRecordColumns.startDate} DESC',
-      );
+      final List<Map<String, dynamic>> maps = await db.rawQuery('''
+        SELECT mr.*, c.${CustomerColumns.name} AS customerName
+        FROM ${TableNames.maintenanceRecords} mr
+        LEFT JOIN ${TableNames.customers} c ON mr.${MaintenanceRecordColumns.customerId} = c.${CustomerColumns.id}
+        WHERE mr.${MaintenanceRecordColumns.equipmentId} = ?
+        ORDER BY mr.${MaintenanceRecordColumns.startDate} DESC
+      ''', [equipmentId]);
       return List.generate(maps.length, (i) => MaintenanceRecordModel.fromMap(maps[i]));
     } catch (e) {
       AppLogger.instance.error('Failed to get records for equipment: $equipmentId', tag: _tag, exception: e);
@@ -42,11 +43,12 @@ class MaintenanceRepository implements IMaintenanceRepository {
   Future<MaintenanceRecordModel?> getRecordById(int id) async {
     try {
       final db = await _dbService.database;
-      final maps = await db.query(
-        TableNames.maintenanceRecords,
-        where: '${MaintenanceRecordColumns.id} = ?',
-        whereArgs: [id],
-      );
+      final maps = await db.rawQuery('''
+        SELECT mr.*, c.${CustomerColumns.name} AS customerName
+        FROM ${TableNames.maintenanceRecords} mr
+        LEFT JOIN ${TableNames.customers} c ON mr.${MaintenanceRecordColumns.customerId} = c.${CustomerColumns.id}
+        WHERE mr.${MaintenanceRecordColumns.id} = ?
+      ''', [id]);
       if (maps.isNotEmpty) {
         return MaintenanceRecordModel.fromMap(maps.first);
       }
@@ -148,10 +150,12 @@ class MaintenanceRepository implements IMaintenanceRepository {
   Future<List<MaintenanceRecordModel>> getAllRecords() async {
     try {
       final db = await _dbService.database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        TableNames.maintenanceRecords,
-        orderBy: '${MaintenanceRecordColumns.startDate} DESC',
-      );
+      final List<Map<String, dynamic>> maps = await db.rawQuery('''
+        SELECT mr.*, c.${CustomerColumns.name} AS customerName
+        FROM ${TableNames.maintenanceRecords} mr
+        LEFT JOIN ${TableNames.customers} c ON mr.${MaintenanceRecordColumns.customerId} = c.${CustomerColumns.id}
+        ORDER BY mr.${MaintenanceRecordColumns.startDate} DESC
+      ''');
       return List.generate(maps.length, (i) => MaintenanceRecordModel.fromMap(maps[i]));
     } catch (e) {
       AppLogger.instance.error('Failed to get all maintenance records', tag: _tag, exception: e);
@@ -165,12 +169,13 @@ class MaintenanceRepository implements IMaintenanceRepository {
   Future<List<MaintenanceScheduleModel>> getScheduleForEquipment(int equipmentId) async {
     try {
       final db = await _dbService.database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        TableNames.maintenanceSchedule,
-        where: '${MaintenanceScheduleColumns.equipmentId} = ?',
-        whereArgs: [equipmentId],
-        orderBy: '${MaintenanceScheduleColumns.scheduledDate} ASC',
-      );
+      final List<Map<String, dynamic>> maps = await db.rawQuery('''
+        SELECT ms.*, c.${CustomerColumns.name} AS customerName
+        FROM ${TableNames.maintenanceSchedule} ms
+        LEFT JOIN ${TableNames.customers} c ON ms.${MaintenanceScheduleColumns.customerId} = c.${CustomerColumns.id}
+        WHERE ms.${MaintenanceScheduleColumns.equipmentId} = ?
+        ORDER BY ms.${MaintenanceScheduleColumns.scheduledDate} ASC
+      ''', [equipmentId]);
       return List.generate(maps.length, (i) => MaintenanceScheduleModel.fromMap(maps[i]));
     } catch (e) {
       AppLogger.instance.error('Failed to get schedule for equipment: $equipmentId', tag: _tag, exception: e);
@@ -182,10 +187,12 @@ class MaintenanceRepository implements IMaintenanceRepository {
   Future<List<MaintenanceScheduleModel>> getAllScheduledItems() async {
     try {
       final db = await _dbService.database;
-      final List<Map<String, dynamic>> maps = await db.query(
-        TableNames.maintenanceSchedule,
-        orderBy: '${MaintenanceScheduleColumns.scheduledDate} ASC',
-      );
+      final List<Map<String, dynamic>> maps = await db.rawQuery('''
+        SELECT ms.*, c.${CustomerColumns.name} AS customerName
+        FROM ${TableNames.maintenanceSchedule} ms
+        LEFT JOIN ${TableNames.customers} c ON ms.${MaintenanceScheduleColumns.customerId} = c.${CustomerColumns.id}
+        ORDER BY ms.${MaintenanceScheduleColumns.scheduledDate} ASC
+      ''');
       return List.generate(maps.length, (i) => MaintenanceScheduleModel.fromMap(maps[i]));
     } catch (e) {
       AppLogger.instance.error('Failed to get all scheduled items', tag: _tag, exception: e);

@@ -16,6 +16,8 @@ import '../sales_invoices/sales_invoice_form_screen.dart';
 import '../sales_invoices/sales_invoice_detail_screen.dart';
 import '../machines/machine_form_dialog.dart';
 import '../machines/machine_detail_screen.dart';
+import 'package:gomaa_management/models/machine_part_model.dart';
+import 'package:gomaa_management/repositories/machine_part_repository.dart';
 
 class CustomerDetailScreen extends StatelessWidget {
   final CustomerModel customer;
@@ -458,36 +460,10 @@ class _CustomerDetailView extends StatelessWidget {
   }
 
   Widget _buildMaintenanceTab(BuildContext context, bool isDark) {
-    // To be extended in Item 4 with full summary
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(
-            Icons.build_circle_outlined,
-            size: 56,
-            color: AppColors.darkGrey,
-          ),
-          SizedBox(height: 12),
-          Text(
-            'ملخص صيانة الماكينات',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          SizedBox(height: 4),
-          Text(
-            'سيتم عرض دورات استبدال قطع الغيار والمواعيد المستحقة هنا',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              color: AppColors.darkGrey,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
+    return _CustomerMaintenanceSummaryTab(
+      customerId: customer.id!,
+      customerName: customer.name,
+      isDark: isDark,
     );
   }
 
@@ -788,6 +764,338 @@ class _CustomerDetailView extends StatelessWidget {
         Text(label,
             style: const TextStyle(fontFamily: 'Cairo', fontSize: 10)),
       ],
+    );
+  }
+}
+
+class _CustomerMaintenanceSummaryTab extends StatefulWidget {
+  final int customerId;
+  final String customerName;
+  final bool isDark;
+
+  const _CustomerMaintenanceSummaryTab({
+    required this.customerId,
+    required this.customerName,
+    required this.isDark,
+  });
+
+  @override
+  State<_CustomerMaintenanceSummaryTab> createState() =>
+      _CustomerMaintenanceSummaryTabState();
+}
+
+class _CustomerMaintenanceSummaryTabState
+    extends State<_CustomerMaintenanceSummaryTab> {
+  final _partRepository = MachinePartRepository();
+  List<MachinePartModel>? _parts;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadParts();
+  }
+
+  Future<void> _loadParts() async {
+    setState(() => _isLoading = true);
+    try {
+      final parts = await _partRepository.getByCustomerId(widget.customerId);
+      if (mounted) {
+        setState(() {
+          _parts = parts;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final parts = _parts ?? [];
+    final overdueCount = parts.where((p) => p.isOverdue).length;
+    final dueSoonCount = parts.where((p) => p.isDueSoon).length;
+    final dueItems = parts.where((p) => p.isOverdue || p.isDueSoon).toList();
+
+    return RefreshIndicator(
+      onRefresh: _loadParts,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        children: [
+          // ── Stat Tiles ───────────────────────────────────────────
+          BlocBuilder<MachineCubit, MachineState>(
+            builder: (context, state) {
+              final machines =
+                  state is MachineLoaded ? state.machines : <MachineModel>[];
+              final machineCount = machines.length;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: widget.isDark ? AppColors.cardDark : AppColors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    _statItem('الماكينات', '$machineCount', AppColors.primary),
+                    const VerticalDivider(width: 1),
+                    _statItem('مستحقة فوراً', '$overdueCount', AppColors.error),
+                    const VerticalDivider(width: 1),
+                    _statItem('تقترب', '$dueSoonCount', AppColors.warning),
+                    const VerticalDivider(width: 1),
+                    _statItem('إجمالي القطع', '${parts.length}', AppColors.darkGrey),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          // ── Upcoming / Overdue Due Items ─────────────────────────
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              'التنبيهات والمواعيد المستحقة',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          if (dueItems.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.success.withValues(alpha: 0.3),
+                ),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.check_circle_outline, color: AppColors.success),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'جميع قطع الغيار بحالة جيدة ولا توجد مواعيد صيانة مستحقة حالياً.',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 13,
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...dueItems.map((item) {
+              final isOverdue = item.isOverdue;
+              final color = isOverdue ? AppColors.error : AppColors.warning;
+              return BlocBuilder<MachineCubit, MachineState>(
+                builder: (context, mState) {
+                  final machines =
+                      mState is MachineLoaded ? mState.machines : <MachineModel>[];
+                  final machine = machines
+                      .cast<MachineModel?>()
+                      .firstWhere((m) => m?.id == item.machineId, orElse: () => null);
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: color.withValues(alpha: 0.5)),
+                    ),
+                    child: ListTile(
+                      onTap: machine != null
+                          ? () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MachineDetailScreen(
+                                    machine: machine,
+                                    customerName: widget.customerName,
+                                  ),
+                                ),
+                              ).then((_) => _loadParts());
+                            }
+                          : null,
+                      leading: CircleAvatar(
+                        backgroundColor: color.withValues(alpha: 0.15),
+                        child: Icon(
+                          isOverdue ? Icons.warning_amber_rounded : Icons.alarm,
+                          color: color,
+                        ),
+                      ),
+                      title: Text(
+                        item.partName,
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${machine != null ? machine.model : "ماكينة #${item.machineId}"} | مستحق: ${DateFormatter.toDisplay(item.nextDueDate!)}',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 12,
+                          color: color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          isOverdue ? 'مستحق الآن' : 'يقترب موعده',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11,
+                            color: color,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            }),
+
+          // ── Latest Replacements ──────────────────────────────────
+          const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              'سجل استبدال القطع المسجلة',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          if (parts.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(
+                child: Text(
+                  'لا توجد سجلات لقطع الغيار مسجلة لماكينات هذا العميل',
+                  style:
+                      TextStyle(fontFamily: 'Cairo', color: AppColors.darkGrey),
+                ),
+              ),
+            )
+          else
+            ...parts.take(15).map((p) => BlocBuilder<MachineCubit, MachineState>(
+                  builder: (context, mState) {
+                    final machines = mState is MachineLoaded
+                        ? mState.machines
+                        : <MachineModel>[];
+                    final machine = machines
+                        .cast<MachineModel?>()
+                        .firstWhere((m) => m?.id == p.machineId,
+                            orElse: () => null);
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        onTap: machine != null
+                            ? () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => MachineDetailScreen(
+                                      machine: machine,
+                                      customerName: widget.customerName,
+                                    ),
+                                  ),
+                                ).then((_) => _loadParts());
+                              }
+                            : null,
+                        leading: const CircleAvatar(
+                          backgroundColor: AppColors.primaryAccent,
+                          child: Icon(Icons.settings,
+                              color: Colors.white, size: 20),
+                        ),
+                        title: Text(
+                          p.partName,
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${machine != null ? machine.model : "ماكينة #${p.machineId}"} • تاريخ الاستبدال: ${DateFormatter.toDisplay(p.replacedDate)}${p.runningHoursAtReplacement != null ? ' • ${p.runningHoursAtReplacement} ساعة' : ''}',
+                          style: const TextStyle(
+                              fontFamily: 'Cairo', fontSize: 12),
+                        ),
+                        trailing: (p.cost ?? 0) > 0
+                            ? Text(
+                                '${(p.cost ?? 0).toStringAsFixed(0)} ج.م',
+                                style: const TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              )
+                            : null,
+                      ),
+                    );
+                  },
+                )),
+        ],
+      ),
+    );
+  }
+
+  Widget _statItem(String label, String value, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11,
+              color: AppColors.darkGrey,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

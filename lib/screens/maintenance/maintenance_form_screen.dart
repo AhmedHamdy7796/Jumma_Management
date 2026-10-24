@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gomaa_management/cubits/maintenance/maintenance_cubit.dart';
 import 'package:gomaa_management/cubits/inventory/inventory_cubit.dart';
+import 'package:gomaa_management/cubits/customer/customer_cubit.dart';
 import 'package:gomaa_management/models/maintenance_record_model.dart';
 import 'package:gomaa_management/models/maintenance_schedule_model.dart';
 import 'package:gomaa_management/models/inventory_model.dart';
+import 'package:gomaa_management/models/customer_model.dart';
 import 'package:gomaa_management/core/widgets/custom_text_field.dart';
 import 'package:gomaa_management/core/widgets/custom_button.dart';
 import 'package:gomaa_management/core/resources/app_colors.dart';
@@ -28,6 +30,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   final _notesController = TextEditingController();
 
   int? _selectedEquipmentId;
+  int? _selectedCustomerId;
   String _maintType = 'preventive'; // 'preventive' | 'record'
   String _scheduleType =
       'preventive'; // 'preventive' | 'inspection' | 'calibration'
@@ -38,6 +41,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   void initState() {
     super.initState();
     context.read<InventoryCubit>().loadInventory();
+    context.read<CustomerCubit>().loadCustomers();
   }
 
   @override
@@ -81,6 +85,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
         // Create schedule item
         final item = MaintenanceScheduleModel(
           equipmentId: _selectedEquipmentId!,
+          customerId: _selectedCustomerId,
           scheduledDate: _selectedDate,
           type: _scheduleType,
           notes: _notesController.text,
@@ -90,6 +95,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
         // Create log record
         final record = MaintenanceRecordModel(
           equipmentId: _selectedEquipmentId!,
+          customerId: _selectedCustomerId,
           technicianName: _techController.text,
           startDate: _selectedDate,
           issueDescription: _issueController.text,
@@ -194,6 +200,44 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                     onChanged: (value) {
                       setState(() {
                         _selectedEquipmentId = value;
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+
+            // Optional Customer Selector Dropdown
+            BlocBuilder<CustomerCubit, CustomerState>(
+              builder: (context, state) {
+                List<CustomerModel> customers = [];
+                if (state is CustomerLoaded) {
+                  customers = state.customers;
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: DropdownButtonFormField<int?>(
+                    initialValue: _selectedCustomerId,
+                    decoration: const InputDecoration(
+                      labelText: 'العميل (اختياري)',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('بدون عميل (صيانة داخلية / عامة)'),
+                      ),
+                      ...customers.map((c) {
+                        return DropdownMenuItem<int?>(
+                          value: c.id,
+                          child: Text(c.name),
+                        );
+                      }),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCustomerId = value;
                       });
                     },
                   ),

@@ -9,6 +9,13 @@ class MaintenanceScheduleModel {
 
   /// Foreign key → [EquipmentModel.id].
   final int equipmentId;
+
+  /// Foreign key → [CustomerModel.id] (optional).
+  final int? customerId;
+
+  /// Display name of the customer (populated from join, optional).
+  final String? customerName;
+
   final DateTime scheduledDate;
 
   /// One of [MaintenanceScheduleType]: `preventive`, `inspection`, `calibration`.
@@ -22,6 +29,8 @@ class MaintenanceScheduleModel {
   const MaintenanceScheduleModel({
     this.id,
     required this.equipmentId,
+    this.customerId,
+    this.customerName,
     required this.scheduledDate,
     required this.type,
     this.reminderEnabled = true,
@@ -40,6 +49,7 @@ class MaintenanceScheduleModel {
     return {
       MaintenanceScheduleColumns.id: id,
       MaintenanceScheduleColumns.equipmentId: equipmentId,
+      MaintenanceScheduleColumns.customerId: customerId,
       MaintenanceScheduleColumns.scheduledDate: scheduledDate.toIso8601String(),
       MaintenanceScheduleColumns.type: type,
       MaintenanceScheduleColumns.reminderEnabled: reminderEnabled ? 1 : 0,
@@ -52,6 +62,8 @@ class MaintenanceScheduleModel {
     return MaintenanceScheduleModel(
       id: map[MaintenanceScheduleColumns.id] as int?,
       equipmentId: map[MaintenanceScheduleColumns.equipmentId] as int,
+      customerId: map[MaintenanceScheduleColumns.customerId] as int?,
+      customerName: map['customerName'] as String?,
       scheduledDate: DateTime.parse(
         map[MaintenanceScheduleColumns.scheduledDate] as String,
       ),
@@ -72,6 +84,8 @@ class MaintenanceScheduleModel {
   MaintenanceScheduleModel copyWith({
     int? id,
     int? equipmentId,
+    int? customerId,
+    String? customerName,
     DateTime? scheduledDate,
     String? type,
     bool? reminderEnabled,
@@ -81,6 +95,8 @@ class MaintenanceScheduleModel {
     return MaintenanceScheduleModel(
       id: id ?? this.id,
       equipmentId: equipmentId ?? this.equipmentId,
+      customerId: customerId ?? this.customerId,
+      customerName: customerName ?? this.customerName,
       scheduledDate: scheduledDate ?? this.scheduledDate,
       type: type ?? this.type,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,

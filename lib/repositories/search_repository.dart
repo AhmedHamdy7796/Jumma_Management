@@ -22,7 +22,8 @@ class SearchRepository implements ISearchRepository {
       final wildCardQuery = '%$query%';
 
       // We query name/mobile from customers, machineName/model from purchases, 
-      // machineName/issue from fixes, name/model from inventory.
+      // machineName/issue from fixes, name/model from inventory,
+      // and model/serialNumber from customer_machines.
       // We use SQL UNION to combine them, utilizing indexes on those fields.
       final sql = '''
         SELECT '${AuditEntityType.customer}' AS type, ${CustomerColumns.id} AS id, ${CustomerColumns.name} AS title, ${CustomerColumns.mobilePhone} AS subtitle
@@ -40,6 +41,10 @@ class SearchRepository implements ISearchRepository {
         SELECT '${AuditEntityType.inventory}' AS type, ${InventoryColumns.id} AS id, ${InventoryColumns.name} AS title, ${InventoryColumns.model} AS subtitle
           FROM ${TableNames.inventory} 
           WHERE ${InventoryColumns.name} LIKE ? OR ${InventoryColumns.model} LIKE ?
+        UNION ALL
+        SELECT '${AuditEntityType.customerMachine}' AS type, ${CustomerMachineColumns.id} AS id, ${CustomerMachineColumns.model} AS title, COALESCE(${CustomerMachineColumns.serialNumber}, '') AS subtitle
+          FROM ${TableNames.customerMachines}
+          WHERE ${CustomerMachineColumns.model} LIKE ? OR ${CustomerMachineColumns.serialNumber} LIKE ?
         LIMIT 50
       ''';
 
@@ -50,6 +55,7 @@ class SearchRepository implements ISearchRepository {
           wildCardQuery, wildCardQuery, // purchase
           wildCardQuery, wildCardQuery, // fix
           wildCardQuery, wildCardQuery, // inventory
+          wildCardQuery, wildCardQuery, // customer machine
         ],
       );
 
@@ -72,6 +78,9 @@ class SearchRepository implements ISearchRepository {
             break;
           case AuditEntityType.inventory:
             icon = Icons.inventory_2;
+            break;
+          case AuditEntityType.customerMachine:
+            icon = Icons.precision_manufacturing;
             break;
           default:
             icon = Icons.search;

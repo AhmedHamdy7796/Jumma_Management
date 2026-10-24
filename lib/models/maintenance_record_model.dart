@@ -9,6 +9,13 @@ class MaintenanceRecordModel {
 
   /// Foreign key → [EquipmentModel.id].
   final int equipmentId;
+
+  /// Foreign key → [CustomerModel.id] (optional).
+  final int? customerId;
+
+  /// Display name of the customer (populated from join, optional).
+  final String? customerName;
+
   final String technicianName;
   final DateTime startDate;
   final DateTime? endDate;
@@ -23,6 +30,8 @@ class MaintenanceRecordModel {
   const MaintenanceRecordModel({
     this.id,
     required this.equipmentId,
+    this.customerId,
+    this.customerName,
     required this.technicianName,
     required this.startDate,
     required this.issueDescription,
@@ -39,6 +48,7 @@ class MaintenanceRecordModel {
     return {
       MaintenanceRecordColumns.id: id,
       MaintenanceRecordColumns.equipmentId: equipmentId,
+      MaintenanceRecordColumns.customerId: customerId,
       MaintenanceRecordColumns.technicianName: technicianName,
       MaintenanceRecordColumns.startDate: startDate.toIso8601String(),
       MaintenanceRecordColumns.endDate: endDate?.toIso8601String(),
@@ -54,6 +64,8 @@ class MaintenanceRecordModel {
     return MaintenanceRecordModel(
       id: map[MaintenanceRecordColumns.id] as int?,
       equipmentId: map[MaintenanceRecordColumns.equipmentId] as int,
+      customerId: map[MaintenanceRecordColumns.customerId] as int?,
+      customerName: map['customerName'] as String?,
       technicianName: map[MaintenanceRecordColumns.technicianName] as String,
       startDate: DateTime.parse(
         map[MaintenanceRecordColumns.startDate] as String,
@@ -77,6 +89,8 @@ class MaintenanceRecordModel {
   MaintenanceRecordModel copyWith({
     int? id,
     int? equipmentId,
+    int? customerId,
+    String? customerName,
     String? technicianName,
     DateTime? startDate,
     DateTime? endDate,
@@ -89,6 +103,8 @@ class MaintenanceRecordModel {
     return MaintenanceRecordModel(
       id: id ?? this.id,
       equipmentId: equipmentId ?? this.equipmentId,
+      customerId: customerId ?? this.customerId,
+      customerName: customerName ?? this.customerName,
       technicianName: technicianName ?? this.technicianName,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,

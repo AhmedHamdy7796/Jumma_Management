@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gomaa_management/cubits/maintenance/maintenance_cubit.dart';
+import 'package:gomaa_management/cubits/customer/customer_cubit.dart';
 import 'package:gomaa_management/models/maintenance_record_model.dart';
 import 'package:gomaa_management/models/maintenance_schedule_model.dart';
+import 'package:gomaa_management/models/customer_model.dart';
 import 'maintenance_form_screen.dart';
 import 'package:gomaa_management/core/resources/app_colors.dart';
 import 'package:gomaa_management/core/resources/app_strings.dart';
@@ -18,13 +20,16 @@ class MaintenanceScreen extends StatefulWidget {
   State<MaintenanceScreen> createState() => _MaintenanceScreenState();
 }
 
-class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTickerProviderStateMixin {
+class _MaintenanceScreenState extends State<MaintenanceScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int? _selectedCustomerId;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    context.read<CustomerCubit>().loadCustomers();
   }
 
   @override
@@ -56,18 +61,28 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildScheduleTab(),
-          _buildRecordsTab(),
+          _buildCustomerFilter(),
+          const Divider(height: 1, thickness: 1),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildScheduleTab(),
+                _buildRecordsTab(),
+              ],
+            ),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const MaintenanceFormScreen()),
+            MaterialPageRoute(
+              builder: (context) => const MaintenanceFormScreen(),
+            ),
           );
         },
         icon: const Icon(Icons.add),
@@ -81,6 +96,85 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
     );
   }
 
+  Widget _buildCustomerFilter() {
+    return BlocBuilder<CustomerCubit, CustomerState>(
+      builder: (context, state) {
+        List<CustomerModel> customers = [];
+        if (state is CustomerLoaded) {
+          customers = state.customers;
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: Theme.of(context).cardColor,
+          child: Row(
+            children: [
+              const Icon(Icons.filter_list, size: 20, color: AppColors.primary),
+              const SizedBox(width: 8),
+              const Text(
+                'العميل:',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int?>(
+                    value: _selectedCustomerId,
+                    isExpanded: true,
+                    hint: const Text(
+                      'كل العملاء (عرض الكل)',
+                      style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                    ),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text(
+                          'كل العملاء (عرض الكل)',
+                          style: TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                        ),
+                      ),
+                      ...customers.map(
+                        (c) => DropdownMenuItem<int?>(
+                          value: c.id,
+                          child: Text(
+                            c.name,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedCustomerId = val;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              if (_selectedCustomerId != null)
+                IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  splashRadius: 18,
+                  onPressed: () {
+                    setState(() {
+                      _selectedCustomerId = null;
+                    });
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildScheduleTab() {
     return BlocBuilder<MaintenanceCubit, MaintenanceState>(
       builder: (context, state) {
@@ -91,6 +185,11 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
         List<MaintenanceScheduleModel> schedule = [];
         if (state is MaintenanceLoaded) {
           schedule = state.schedule;
+        }
+
+        if (_selectedCustomerId != null) {
+          schedule =
+              schedule.where((s) => s.customerId == _selectedCustomerId).toList();
         }
 
         if (schedule.isEmpty) {
@@ -108,13 +207,17 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
             final isCompleted = item.isCompleted;
             return Card(
               margin: const EdgeInsets.only(bottom: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               elevation: 2,
               shadowColor: Colors.black.withValues(alpha: 0.1),
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: Theme.of(context).brightness == Brightness.dark ? AppColors.cardDark : AppColors.white,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.cardDark
+                      : AppColors.white,
                   border: Border.all(
                     color: isCompleted
                         ? AppColors.success.withValues(alpha: 0.3)
@@ -132,13 +235,17 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: isCompleted
-                                  ? AppColors.success.withValues(alpha: 0.1)
+                                   ? AppColors.success.withValues(alpha: 0.1)
                                   : AppColors.primary.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              isCompleted ? Icons.check_circle_outline : Icons.handyman_outlined,
-                              color: isCompleted ? AppColors.success : AppColors.primary,
+                              isCompleted
+                                  ? Icons.check_circle_outline
+                                  : Icons.handyman_outlined,
+                              color: isCompleted
+                                  ? AppColors.success
+                                  : AppColors.primary,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -147,7 +254,11 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  item.type == 'preventive' ? 'وقائية' : item.type == 'inspection' ? 'فحص دوري' : 'معايرة',
+                                  item.type == 'preventive'
+                                      ? 'وقائية'
+                                      : item.type == 'inspection'
+                                          ? 'فحص دوري'
+                                          : 'معايرة',
                                   style: const TextStyle(
                                     fontFamily: 'Cairo',
                                     fontWeight: FontWeight.bold,
@@ -172,24 +283,49 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                           ),
                           if (!isCompleted)
                             TextButton.icon(
-                              icon: const Icon(Icons.check, color: AppColors.success, size: 18),
-                              label: const Text('إكمال', style: TextStyle(color: AppColors.success, fontFamily: 'Cairo', fontSize: 12)),
-                              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                              icon: const Icon(
+                                Icons.check,
+                                color: AppColors.success,
+                                size: 18,
+                              ),
+                              label: const Text(
+                                'إكمال',
+                                style: TextStyle(
+                                  color: AppColors.success,
+                                  fontFamily: 'Cairo',
+                                  fontSize: 12,
+                                ),
+                              ),
+                              style: TextButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                              ),
                               onPressed: () {
-                                context.read<MaintenanceCubit>().updateScheduleItem(
-                                  item.copyWith(completedAt: DateTime.now()),
-                                );
+                                context
+                                    .read<MaintenanceCubit>()
+                                    .updateScheduleItem(
+                                      item.copyWith(
+                                        completedAt: DateTime.now(),
+                                      ),
+                                    );
                               },
                             ),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
                             splashRadius: 20,
                             onPressed: () => ConfirmDeleteDialog.show(
                               context,
                               title: AppStrings.confirmDeleteTitle,
-                              content: 'هل أنت متأكد من حذف هذا الموعد المجدول؟',
+                              content:
+                                  'هل أنت متأكد من حذف هذا الموعد المجدول؟',
                               onDelete: () {
-                                context.read<MaintenanceCubit>().deleteScheduleItem(item.id!);
+                                context
+                                    .read<MaintenanceCubit>()
+                                    .deleteScheduleItem(item.id!);
                               },
                             ),
                           ),
@@ -202,14 +338,33 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                       padding: const EdgeInsets.all(14),
                       child: Column(
                         children: [
-                          InfoRow(icon: Icons.calendar_today, text: 'التاريخ المجدول: ${DateFormatter.toDisplay(item.scheduledDate)}'),
+                          if (item.customerName != null &&
+                              item.customerName!.isNotEmpty) ...[
+                            InfoRow(
+                              icon: Icons.person_outline,
+                              text: 'العميل: ${item.customerName}',
+                            ),
+                            const SizedBox(height: 6),
+                          ],
+                          InfoRow(
+                            icon: Icons.calendar_today,
+                            text:
+                                'التاريخ المجدول: ${DateFormatter.toDisplay(item.scheduledDate)}',
+                          ),
                           if (isCompleted) ...[
                             const SizedBox(height: 6),
-                            InfoRow(icon: Icons.check_circle_outline, text: 'تمت بتاريخ: ${DateFormatter.toDisplay(item.completedAt!)}'),
+                            InfoRow(
+                              icon: Icons.check_circle_outline,
+                              text:
+                                  'تمت بتاريخ: ${DateFormatter.toDisplay(item.completedAt!)}',
+                            ),
                           ],
                           if (item.notes.isNotEmpty) ...[
                             const SizedBox(height: 6),
-                            InfoRow(icon: Icons.notes, text: 'ملاحظات: ${item.notes}'),
+                            InfoRow(
+                              icon: Icons.notes,
+                              text: 'ملاحظات: ${item.notes}',
+                            ),
                           ],
                         ],
                       ),
@@ -236,6 +391,11 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
           records = state.records;
         }
 
+        if (_selectedCustomerId != null) {
+          records =
+              records.where((r) => r.customerId == _selectedCustomerId).toList();
+        }
+
         if (records.isEmpty) {
           return const EmptyState(
             icon: Icons.history_outlined,
@@ -250,13 +410,17 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
             final record = records[index];
             return Card(
               margin: const EdgeInsets.only(bottom: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               elevation: 2,
               shadowColor: Colors.black.withValues(alpha: 0.1),
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: Theme.of(context).brightness == Brightness.dark ? AppColors.cardDark : AppColors.white,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.cardDark
+                      : AppColors.white,
                   border: Border.all(
                     color: Theme.of(context).brightness == Brightness.dark
                         ? AppColors.darkGrey.withValues(alpha: 0.2)
@@ -276,7 +440,10 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                               color: AppColors.teal.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.engineering_outlined, color: AppColors.teal),
+                            child: const Icon(
+                              Icons.engineering_outlined,
+                              color: AppColors.teal,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -308,14 +475,21 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
                             splashRadius: 20,
                             onPressed: () => ConfirmDeleteDialog.show(
                               context,
                               title: AppStrings.confirmDeleteTitle,
-                              content: 'هل أنت متأكد من حذف هذا السجل بشكل نهائي؟',
+                              content:
+                                  'هل أنت متأكد من حذف هذا السجل بشكل نهائي؟',
                               onDelete: () {
-                                context.read<MaintenanceCubit>().deleteRecord(record.id!);
+                                context
+                                    .read<MaintenanceCubit>()
+                                    .deleteRecord(record.id!);
                               },
                             ),
                           ),
@@ -328,19 +502,45 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> with SingleTicker
                       padding: const EdgeInsets.all(14),
                       child: Column(
                         children: [
-                          InfoRow(icon: Icons.error_outline, text: 'وصف المشكلة: ${record.issueDescription}'),
+                          if (record.customerName != null &&
+                              record.customerName!.isNotEmpty) ...[
+                            InfoRow(
+                              icon: Icons.person_outline,
+                              text: 'العميل: ${record.customerName}',
+                            ),
+                            const SizedBox(height: 6),
+                          ],
+                          InfoRow(
+                            icon: Icons.error_outline,
+                            text: 'وصف المشكلة: ${record.issueDescription}',
+                          ),
                           if (record.workDone.isNotEmpty) ...[
                             const SizedBox(height: 6),
-                            InfoRow(icon: Icons.check, text: 'ما تم إنجازه: ${record.workDone}'),
+                            InfoRow(
+                              icon: Icons.check,
+                              text: 'ما تم إنجازه: ${record.workDone}',
+                            ),
                           ],
                           const SizedBox(height: 6),
-                          InfoRow(icon: Icons.calendar_today, text: 'تاريخ البدء: ${DateFormatter.toDisplay(record.startDate)}'),
+                          InfoRow(
+                            icon: Icons.calendar_today,
+                            text:
+                                'تاريخ البدء: ${DateFormatter.toDisplay(record.startDate)}',
+                          ),
                           if (record.endDate != null) ...[
                             const SizedBox(height: 6),
-                            InfoRow(icon: Icons.calendar_today_outlined, text: 'تاريخ الانتهاء: ${DateFormatter.toDisplay(record.endDate!)}'),
+                            InfoRow(
+                              icon: Icons.calendar_today_outlined,
+                              text:
+                                  'تاريخ الانتهاء: ${DateFormatter.toDisplay(record.endDate!)}',
+                            ),
                           ],
                           const SizedBox(height: 6),
-                          InfoRow(icon: Icons.attach_money, text: 'التكلفة: ${record.cost.toStringAsFixed(2)} ${AppStrings.currency}'),
+                          InfoRow(
+                            icon: Icons.attach_money,
+                            text:
+                                'التكلفة: ${record.cost.toStringAsFixed(2)} ${AppStrings.currency}',
+                          ),
                         ],
                       ),
                     ),

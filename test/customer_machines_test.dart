@@ -1,14 +1,8 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as p;
-import 'package:gomaa_management/database/database_constants.dart';
-import 'package:gomaa_management/models/customer_model.dart';
 import 'package:gomaa_management/models/machine_model.dart';
-import 'package:gomaa_management/repositories/customer_repository.dart';
-import 'package:gomaa_management/repositories/machine_repository.dart';
-import 'package:gomaa_management/cubits/machine/machine_cubit.dart';
 import 'package:gomaa_management/services/validation_service.dart';
 
 void main() {
