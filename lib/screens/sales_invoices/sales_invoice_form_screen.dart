@@ -5,6 +5,7 @@ import 'package:gomaa_management/cubits/inventory/inventory_cubit.dart';
 import 'package:gomaa_management/repositories/inventory_repository.dart';
 import 'package:gomaa_management/models/sales_invoice_model.dart';
 import 'package:gomaa_management/core/resources/app_colors.dart';
+import 'package:gomaa_management/core/utils/invoice_calculator.dart';
 import 'package:gomaa_management/services/validation_service.dart';
 import 'package:gomaa_management/core/widgets/custom_text_field.dart';
 import 'package:gomaa_management/core/widgets/custom_button.dart';
@@ -37,12 +38,15 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
   bool _isLoading = false;
   bool get _isEditing => widget.invoice != null;
 
-  double get _total =>
-      (double.tryParse(_priceController.text) ?? 0) *
-      (int.tryParse(_quantityController.text) ?? 1);
+  double get _total => InvoiceCalculator.total(
+        price: double.tryParse(_priceController.text) ?? 0,
+        quantity: int.tryParse(_quantityController.text) ?? 1,
+      );
 
-  double get _remaining =>
-      _total - (double.tryParse(_paidController.text) ?? 0);
+  double get _remaining => InvoiceCalculator.remaining(
+        totalAmount: _total,
+        paid: double.tryParse(_paidController.text) ?? 0,
+      );
 
   @override
   void initState() {
@@ -87,11 +91,12 @@ class _SalesInvoiceFormScreenState extends State<SalesInvoiceFormScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final price = double.tryParse(_priceController.text) ?? 0.0;
-    final paid = double.tryParse(_paidController.text) ?? 0.0;
-    final qty = int.tryParse(_quantityController.text) ?? 1;
-    final total = price * qty;
-    final remaining = total - paid;
+    final price = InvoiceCalculator.parseMoney(_priceController.text);
+    final rawPaid = InvoiceCalculator.parseMoney(_paidController.text);
+    final qty = InvoiceCalculator.parseQuantity(_quantityController.text);
+    final total = InvoiceCalculator.total(price: price, quantity: qty);
+    final paid = InvoiceCalculator.roundMoney(rawPaid);
+    final remaining = InvoiceCalculator.remaining(totalAmount: total, paid: paid);
     final itemName = _itemNameController.text.trim();
     final model = _modelController.text.trim();
 
