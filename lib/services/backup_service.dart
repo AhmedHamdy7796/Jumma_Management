@@ -30,6 +30,16 @@ const _coreTables = [
   TableNames.settings,
 ];
 
+/// Optional tables introduced in schema v10 (customer machines & parts).
+/// Checked during restore for diagnostics, but their absence does NOT block restore:
+/// older backups without them will be seamlessly migrated by [MigrationManager] on reopen.
+const _optionalTables = [
+  TableNames.customerMachines,
+  TableNames.machineParts,
+  TableNames.maintenanceRecords,
+  TableNames.maintenanceSchedule,
+];
+
 /// Maximum number of backup files to keep in the local backups folder.
 const _maxLocalBackups = 10;
 
@@ -295,6 +305,20 @@ class BackupService {
             technicalDetail: 'Core table missing: $tableName',
             userMessage:
                 'الملف المحدد ليس نسخة احتياطية صالحة (جدول "$tableName" مفقود).',
+          );
+        }
+      }
+
+      // Optional tables check (diagnostic: does not block restore).
+      for (final tableName in _optionalTables) {
+        final rows = await candidateDb.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+          [tableName],
+        );
+        if (rows.isEmpty) {
+          AppLogger.instance.info(
+            'Optional table absent in backup: $tableName (will be created by migration on reopen)',
+            tag: _tag,
           );
         }
       }

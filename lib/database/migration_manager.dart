@@ -592,25 +592,39 @@ class MigrationManager {
       )
     ''');
 
+    final tables =
+        await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+    final existingTables = tables.map((t) => t['name'] as String).toSet();
+
     // 3. maintenance_records: add customerId column if missing
-    final recordCols =
-        await db.rawQuery('PRAGMA table_info(maintenance_records)');
-    final hasCustomerInRecords =
-        recordCols.any((c) => c['name'] == 'customerId');
-    if (!hasCustomerInRecords) {
+    if (existingTables.contains('maintenance_records')) {
+      final recordCols =
+          await db.rawQuery('PRAGMA table_info(maintenance_records)');
+      final hasCustomerInRecords =
+          recordCols.any((c) => c['name'] == 'customerId');
+      if (!hasCustomerInRecords) {
+        await db.execute(
+          'ALTER TABLE maintenance_records ADD COLUMN customerId INTEGER REFERENCES customers(id) ON DELETE SET NULL',
+        );
+      }
       await db.execute(
-        'ALTER TABLE maintenance_records ADD COLUMN customerId INTEGER REFERENCES customers(id) ON DELETE SET NULL',
+        'CREATE INDEX IF NOT EXISTS idx_maint_customer ON maintenance_records(customerId)',
       );
     }
 
     // 4. maintenance_schedule: add customerId column if missing
-    final schedCols =
-        await db.rawQuery('PRAGMA table_info(maintenance_schedule)');
-    final hasCustomerInSched =
-        schedCols.any((c) => c['name'] == 'customerId');
-    if (!hasCustomerInSched) {
+    if (existingTables.contains('maintenance_schedule')) {
+      final schedCols =
+          await db.rawQuery('PRAGMA table_info(maintenance_schedule)');
+      final hasCustomerInSched =
+          schedCols.any((c) => c['name'] == 'customerId');
+      if (!hasCustomerInSched) {
+        await db.execute(
+          'ALTER TABLE maintenance_schedule ADD COLUMN customerId INTEGER REFERENCES customers(id) ON DELETE SET NULL',
+        );
+      }
       await db.execute(
-        'ALTER TABLE maintenance_schedule ADD COLUMN customerId INTEGER REFERENCES customers(id) ON DELETE SET NULL',
+        'CREATE INDEX IF NOT EXISTS idx_sched_customer ON maintenance_schedule(customerId)',
       );
     }
 
@@ -632,12 +646,6 @@ class MigrationManager {
     );
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_machine_parts_due ON machine_parts(next_due_date)',
-    );
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_maint_customer ON maintenance_records(customerId)',
-    );
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_sched_customer ON maintenance_schedule(customerId)',
     );
   }
 }
