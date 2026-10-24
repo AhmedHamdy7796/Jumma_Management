@@ -64,4 +64,17 @@ class ValidationService {
     }
     return null;
   }
+
+  /// Validates manufacture year: optional, but if entered must be between 1950 and current year.
+  static String? validateManufactureYear(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+    final year = int.tryParse(value.trim());
+    final currentYear = DateTime.now().year;
+    if (year == null || year < 1950 || year > currentYear) {
+      return 'سنة الصنع يجب أن تكون بين 1950 و $currentYear';
+    }
+    return null;
+  }
 }

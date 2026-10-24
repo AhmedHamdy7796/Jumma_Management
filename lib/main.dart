@@ -21,6 +21,7 @@ import 'repositories/fix_repository.dart';
 import 'repositories/inventory_repository.dart';
 import 'repositories/sales_invoice_repository.dart';
 import 'repositories/maintenance_repository.dart';
+import 'repositories/machine_repository.dart';
 import 'repositories/settings_repository.dart';
 import 'repositories/audit_log_repository.dart';
 import 'repositories/search_repository.dart';
@@ -32,6 +33,7 @@ import 'cubits/fix/fix_cubit.dart';
 import 'cubits/inventory/inventory_cubit.dart';
 import 'cubits/sales_invoice/sales_invoice_cubit.dart';
 import 'cubits/maintenance/maintenance_cubit.dart';
+import 'cubits/machine/machine_cubit.dart';
 import 'cubits/settings/settings_cubit.dart';
 import 'cubits/backup/backup_cubit.dart';
 import 'cubits/audit_log/audit_log_cubit.dart';
@@ -80,6 +82,7 @@ class MyApp extends StatelessWidget {
   final inventoryRepo = InventoryRepository();
   final salesInvoiceRepo = SalesInvoiceRepository();
   final maintenanceRepo = MaintenanceRepository();
+  final machineRepo = MachineRepository();
   final settingsRepo = SettingsRepository();
   final auditLogRepo = AuditLogRepository();
   final searchRepo = SearchRepository();
@@ -108,6 +111,7 @@ class MyApp extends StatelessWidget {
           )..loadAll(),
         ),
         BlocProvider(create: (_) => MaintenanceCubit(maintenanceRepo)..loadMaintenanceData()),
+        BlocProvider(create: (_) => MachineCubit(machineRepo)..loadAll()),
         BlocProvider(create: (_) => SettingsCubit(settingsRepo)..loadSettings()),
         BlocProvider(create: (_) => AuditLogCubit(auditLogRepo)),
         BlocProvider(create: (_) => SearchCubit(searchRepo)),
@@ -121,6 +125,7 @@ class MyApp extends StatelessWidget {
               ctx.read<InventoryCubit>().loadInventory();
               ctx.read<SalesInvoiceCubit>().loadAll();
               ctx.read<MaintenanceCubit>().loadMaintenanceData();
+              ctx.read<MachineCubit>().loadAll();
               ctx.read<SettingsCubit>().loadSettings();
             }
           },
