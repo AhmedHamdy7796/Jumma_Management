@@ -10,7 +10,9 @@ import 'package:gomaa_management/repositories/sales_invoice_repository.dart';
 import 'package:gomaa_management/repositories/machine_repository.dart';
 import 'package:gomaa_management/core/resources/app_colors.dart';
 import 'package:gomaa_management/core/utils/date_formatter.dart';
+import 'package:gomaa_management/core/utils/invoice_calculator.dart';
 import 'package:gomaa_management/core/widgets/confirm_delete_dialog.dart';
+import 'package:gomaa_management/models/customer_balance_summary.dart';
 import 'customer_form_screen.dart';
 import '../sales_invoices/sales_invoice_form_screen.dart';
 import '../sales_invoices/sales_invoice_detail_screen.dart';
@@ -224,41 +226,53 @@ class _CustomerDetailView extends StatelessWidget {
   Widget _buildInvoicesTab(BuildContext context, bool isDark) {
     return Column(
       children: [
-        // Balance Summary
+        // Balance Summary (Aggregated via single SQL query)
         BlocBuilder<SalesInvoiceCubit, SalesInvoiceState>(
           builder: (context, state) {
-            double totalAmount = 0;
-            double totalPaid = 0;
-            double totalRemaining = 0;
-            if (state is SalesInvoiceLoaded) {
-              for (final inv in state.invoices) {
-                totalAmount += inv.totalAmount;
-                totalPaid += inv.paidAmount;
-                totalRemaining += inv.remainingBalance;
-              }
-            }
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.cardDark : AppColors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
+            return FutureBuilder<CustomerBalanceSummary>(
+              future: context
+                  .read<SalesInvoiceCubit>()
+                  .getCustomerBalanceSummary(customer.id!),
+              builder: (context, snapshot) {
+                final summary = snapshot.data ?? CustomerBalanceSummary.zero;
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.cardDark : AppColors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  _balanceTile('المجموع', totalAmount, AppColors.primaryAccent),
-                  const VerticalDivider(width: 1),
-                  _balanceTile('المدفوع', totalPaid, AppColors.success),
-                  const VerticalDivider(width: 1),
-                  _balanceTile('المتبقي', totalRemaining, AppColors.error),
-                ],
-              ),
+                  child: Row(
+                    children: [
+                      _balanceTile(
+                        'إجمالي الفواتير',
+                        summary.totalInvoiced,
+                        AppColors.primaryAccent,
+                      ),
+                      const VerticalDivider(width: 1),
+                      _balanceTile(
+                        'إجمالي المدفوع',
+                        summary.totalPaid,
+                        AppColors.success,
+                      ),
+                      const VerticalDivider(width: 1),
+                      _balanceTile(
+                        'إجمالي المتبقي',
+                        summary.totalRemaining,
+                        summary.totalRemaining > 0
+                            ? AppColors.error
+                            : AppColors.success,
+                      ),
+                    ],
+                  ),
+                );
+              },
             );
           },
         ),
@@ -657,17 +671,21 @@ class _CustomerDetailView extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            '${amount.toStringAsFixed(2)} ج.م',
+            InvoiceCalculator.formatMoney(amount),
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Cairo',
               fontWeight: FontWeight.bold,
               color: color,
-              fontSize: 13,
+              fontSize: 12,
             ),
           ),
           const SizedBox(height: 4),
-          Text(label,
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 11)),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
+          ),
         ],
       ),
     );

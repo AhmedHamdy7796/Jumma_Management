@@ -1,8 +1,10 @@
 import 'package:gomaa_management/core/errors/app_exception.dart';
 import 'package:gomaa_management/core/logging/app_logger.dart';
+import 'package:gomaa_management/core/utils/invoice_calculator.dart';
 import 'package:gomaa_management/database/database_constants.dart';
 import 'package:gomaa_management/database/database_service.dart';
 import 'package:gomaa_management/models/sales_invoice_model.dart';
+import 'package:gomaa_management/models/customer_balance_summary.dart';
 import 'package:gomaa_management/repositories/interfaces/i_sales_invoice_repository.dart';
 import 'package:gomaa_management/repositories/interfaces/i_audit_log_repository.dart';
 import 'package:gomaa_management/repositories/audit_log_repository.dart';
@@ -312,6 +314,43 @@ class SalesInvoiceRepository implements ISalesInvoiceRepository {
           'Failed to get balance for customer $customerId',
           tag: _tag,
           exception: e);
+      throw AppDatabaseException(technicalDetail: e.toString());
+    }
+  }
+
+  @override
+  Future<CustomerBalanceSummary> getCustomerBalanceSummary(int customerId) async {
+    try {
+      final db = await _dbService.database;
+      final result = await db.rawQuery(
+        '''
+        SELECT
+          COALESCE(SUM(${SalesInvoiceColumns.totalAmount}), 0) AS totalInvoiced,
+          COALESCE(SUM(${SalesInvoiceColumns.paidAmount}), 0) AS totalPaid,
+          COALESCE(SUM(${SalesInvoiceColumns.remainingBalance}), 0) AS totalRemaining
+        FROM ${TableNames.salesInvoices}
+        WHERE ${SalesInvoiceColumns.customerId} = ?
+        ''',
+        [customerId],
+      );
+      if (result.isNotEmpty) {
+        final row = result.first;
+        final totalInvoiced = InvoiceCalculator.roundMoney((row['totalInvoiced'] as num).toDouble());
+        final totalPaid = InvoiceCalculator.roundMoney((row['totalPaid'] as num).toDouble());
+        final totalRemaining = InvoiceCalculator.roundMoney((row['totalRemaining'] as num).toDouble());
+        return CustomerBalanceSummary(
+          totalInvoiced: totalInvoiced,
+          totalPaid: totalPaid,
+          totalRemaining: totalRemaining,
+        );
+      }
+      return CustomerBalanceSummary.zero;
+    } catch (e) {
+      AppLogger.instance.error(
+        'Failed to get balance summary for customer $customerId',
+        tag: _tag,
+        exception: e,
+      );
       throw AppDatabaseException(technicalDetail: e.toString());
     }
   }

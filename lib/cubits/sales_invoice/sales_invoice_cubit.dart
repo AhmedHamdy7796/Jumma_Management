@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:gomaa_management/models/sales_invoice_model.dart';
+import 'package:gomaa_management/models/customer_balance_summary.dart';
 import 'package:gomaa_management/repositories/interfaces/i_sales_invoice_repository.dart';
 
 // ─── States ────────────────────────────────────────────────────────────────
@@ -122,6 +123,14 @@ class SalesInvoiceCubit extends Cubit<SalesInvoiceState> {
       return await _repo.getById(id);
     } catch (_) {
       return null;
+    }
+  }
+
+  Future<CustomerBalanceSummary> getCustomerBalanceSummary(int customerId) async {
+    try {
+      return await _repo.getCustomerBalanceSummary(customerId);
+    } catch (_) {
+      return CustomerBalanceSummary.zero;
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:gomaa_management/models/sales_invoice_model.dart';
+import 'package:gomaa_management/models/customer_balance_summary.dart';
 
 /// Repository interface for Sales Invoice operations.
 abstract class ISalesInvoiceRepository {
@@ -25,4 +26,7 @@ abstract class ISalesInvoiceRepository {
 
   /// Calculates the total remaining balance for a customer.
   Future<double> getCustomerBalance(int customerId);
+
+  /// Calculates aggregated balance summary (total invoiced, paid, remaining) in one query.
+  Future<CustomerBalanceSummary> getCustomerBalanceSummary(int customerId);
 }
