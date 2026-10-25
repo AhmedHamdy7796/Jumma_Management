@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import 'package:gomaa_management/cubits/backup/backup_cubit.dart';
 import 'package:gomaa_management/cubits/settings/settings_cubit.dart';
@@ -14,6 +17,7 @@ import 'package:gomaa_management/core/widgets/custom_button.dart';
 import 'package:gomaa_management/screens/audit_log/audit_log_screen.dart';
 import 'package:gomaa_management/screens/settings/users_management_tab.dart';
 import 'package:gomaa_management/services/backup_service.dart';
+import 'package:gomaa_management/services/validation_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -27,13 +31,30 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _currentTabIndex = 0;
 
-  // Company tab controllers
+  // Company tab form & controllers
+  final _companyFormKey = GlobalKey<FormState>();
   final _companyNameController = TextEditingController();
   final _companyPhoneController = TextEditingController();
   final _companyAddressController = TextEditingController();
   final _currencyController = TextEditingController();
+  final _companyTaxNumberController = TextEditingController();
+  final _invoiceFooterNoteController = TextEditingController();
+  String? _logoRelativePath;
+  String? _appDocsDirPath;
+
   bool _controllersInitialized = false;
+  bool _isSavingCompany = false;
+
+  // Track initial values to detect unsaved changes
+  String _initialCompanyName = '';
+  String _initialCompanyPhone = '';
+  String _initialCompanyAddress = '';
+  String _initialCurrency = '';
+  String _initialCompanyTaxNumber = '';
+  String _initialInvoiceFooterNote = '';
+  String? _initialLogoRelativePath;
 
   // Drive settings tab controllers
   final _driveFolderController = TextEditingController();
@@ -43,12 +64,101 @@ class _SettingsScreenState extends State<SettingsScreen>
   // ── Local state for "last backup" info (refreshed after each operation) ───
   String? _localBackupsPath;
 
+  bool get _hasUnsavedCompanyChanges {
+    return _companyNameController.text.trim() != _initialCompanyName.trim() ||
+        _companyPhoneController.text.trim() != _initialCompanyPhone.trim() ||
+        _companyAddressController.text.trim() != _initialCompanyAddress.trim() ||
+        _currencyController.text.trim() != _initialCurrency.trim() ||
+        _companyTaxNumberController.text.trim() != _initialCompanyTaxNumber.trim() ||
+        _invoiceFooterNoteController.text.trim() != _initialInvoiceFooterNote.trim() ||
+        _logoRelativePath != _initialLogoRelativePath;
+  }
+
+  void _syncInitialCompanyValues() {
+    _initialCompanyName = _companyNameController.text;
+    _initialCompanyPhone = _companyPhoneController.text;
+    _initialCompanyAddress = _companyAddressController.text;
+    _initialCurrency = _currencyController.text;
+    _initialCompanyTaxNumber = _companyTaxNumberController.text;
+    _initialInvoiceFooterNote = _invoiceFooterNoteController.text;
+    _initialLogoRelativePath = _logoRelativePath;
+  }
+
+  void _resetCompanyToInitial() {
+    _companyNameController.text = _initialCompanyName;
+    _companyPhoneController.text = _initialCompanyPhone;
+    _companyAddressController.text = _initialCompanyAddress;
+    _currencyController.text = _initialCurrency;
+    _companyTaxNumberController.text = _initialCompanyTaxNumber;
+    _invoiceFooterNoteController.text = _initialInvoiceFooterNote;
+    setState(() {
+      _logoRelativePath = _initialLogoRelativePath;
+    });
+  }
+
+  Future<bool> _showDiscardConfirmDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'تغييرات غير محفوظة',
+          textAlign: TextAlign.right,
+          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'لديك تعديلات غير محفوظة في بيانات الشركة. هل تريد تجاهل هذه التغييرات والمتابعة؟',
+          textAlign: TextAlign.right,
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('البقاء', style: TextStyle(fontFamily: 'Cairo')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('تجاهل التغييرات', style: TextStyle(fontFamily: 'Cairo')),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  void _handleTabSelection() async {
+    if (_tabController.indexIsChanging) {
+      if (_currentTabIndex == 0 && _tabController.index != 0 && _hasUnsavedCompanyChanges) {
+        final targetIndex = _tabController.index;
+        _tabController.index = 0;
+        final shouldDiscard = await _showDiscardConfirmDialog();
+        if (shouldDiscard && mounted) {
+          _resetCompanyToInitial();
+          _currentTabIndex = targetIndex;
+          _tabController.animateTo(targetIndex);
+        }
+      } else {
+        _currentTabIndex = _tabController.index;
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(_handleTabSelection);
     context.read<SettingsCubit>().loadSettings();
+    _loadAppDocsDir();
     _loadLocalBackupsPath();
+  }
+
+  Future<void> _loadAppDocsDir() async {
+    final dir = await getApplicationDocumentsDirectory();
+    if (mounted) setState(() => _appDocsDirPath = dir.path);
   }
 
   Future<void> _loadLocalBackupsPath() async {
@@ -56,13 +166,27 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (mounted) setState(() => _localBackupsPath = dir.path);
   }
 
+  void _initCompanyControllers(Map<String, String> settings) {
+    _companyNameController.text = settings[SettingsKeys.companyName] ?? '';
+    _companyPhoneController.text = settings[SettingsKeys.companyPhone] ?? '';
+    _companyAddressController.text = settings[SettingsKeys.companyAddress] ?? '';
+    _currencyController.text = settings[SettingsKeys.currencySymbol] ?? 'ج.م';
+    _companyTaxNumberController.text = settings[SettingsKeys.companyTaxNumber] ?? '';
+    _invoiceFooterNoteController.text = settings[SettingsKeys.invoiceFooterNote] ?? '';
+    _logoRelativePath = settings[SettingsKeys.companyLogoPath];
+    _syncInitialCompanyValues();
+  }
+
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabSelection);
     _tabController.dispose();
     _companyNameController.dispose();
     _companyPhoneController.dispose();
     _companyAddressController.dispose();
     _currencyController.dispose();
+    _companyTaxNumberController.dispose();
+    _invoiceFooterNoteController.dispose();
     _driveFolderController.dispose();
     _driveKeepCountController.dispose();
     super.dispose();
@@ -76,69 +200,76 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) {
     return BlocListener<BackupCubit, BackupState>(
       listener: _onBackupState,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'الإعدادات والنسخ الاحتياطي',
-            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
-          ),
-          centerTitle: true,
-          elevation: 0,
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          bottom: TabBar(
-            controller: _tabController,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            indicatorColor: Colors.white,
-            isScrollable: true,
-            tabs: const [
-              Tab(text: 'إعدادات الشركة'),
-              Tab(text: 'النسخ الاحتياطي'),
-              Tab(text: 'Google Drive'),
-              Tab(text: 'إدارة المستخدمين'),
-            ],
-          ),
-        ),
-        body: BlocBuilder<SettingsCubit, SettingsState>(
-          builder: (context, state) {
-            if (state is SettingsLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            Map<String, String> settings = {};
-            if (state is SettingsLoaded) {
-              settings = state.settings;
-              if (!_controllersInitialized) {
-                _companyNameController.text =
-                    settings[SettingsKeys.companyName] ?? '';
-                _companyPhoneController.text =
-                    settings[SettingsKeys.companyPhone] ?? '';
-                _companyAddressController.text =
-                    settings[SettingsKeys.companyAddress] ?? '';
-                _currencyController.text =
-                    settings[SettingsKeys.currencySymbol] ?? 'ج.م';
-                _controllersInitialized = true;
-              }
-              if (!_driveControllersInitialized) {
-                _driveFolderController.text =
-                    settings[SettingsKeys.driveFolderName] ?? 'Gomaa Backups';
-                _driveKeepCountController.text =
-                    settings[SettingsKeys.driveKeepCount] ?? '10';
-                _driveControllersInitialized = true;
-              }
-            }
-
-            return TabBarView(
+      child: PopScope(
+        canPop: !_hasUnsavedCompanyChanges,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          final shouldPop = await _showDiscardConfirmDialog();
+          if (shouldPop && context.mounted) {
+            Navigator.of(context).pop();
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text(
+              'الإعدادات والنسخ الاحتياطي',
+              style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+            ),
+            centerTitle: true,
+            elevation: 0,
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            bottom: TabBar(
               controller: _tabController,
-              children: [
-                _buildCompanyTab(settings),
-                _buildLocalBackupTab(settings),
-                _buildDriveTab(settings),
-                const UsersManagementTab(),
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: Colors.white,
+              isScrollable: true,
+              tabs: const [
+                Tab(text: 'إعدادات الشركة'),
+                Tab(text: 'النسخ الاحتياطي'),
+                Tab(text: 'Google Drive'),
+                Tab(text: 'إدارة المستخدمين'),
               ],
-            );
-          },
+            ),
+          ),
+          body: BlocConsumer<SettingsCubit, SettingsState>(
+            listener: (context, state) {
+              if (state is SettingsLoaded) {
+                if (!_controllersInitialized) {
+                  _initCompanyControllers(state.settings);
+                  _controllersInitialized = true;
+                }
+                if (!_driveControllersInitialized) {
+                  _driveFolderController.text =
+                      state.settings[SettingsKeys.driveFolderName] ?? 'Gomaa Backups';
+                  _driveKeepCountController.text =
+                      state.settings[SettingsKeys.driveKeepCount] ?? '10';
+                  _driveControllersInitialized = true;
+                }
+              }
+            },
+            builder: (context, state) {
+              if (state is SettingsLoading && !_controllersInitialized) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              Map<String, String> settings = {};
+              if (state is SettingsLoaded) {
+                settings = state.settings;
+              }
+
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildCompanyTab(settings),
+                  _buildLocalBackupTab(settings),
+                  _buildDriveTab(settings),
+                  const UsersManagementTab(),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -242,110 +373,363 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Tab: Company
+  // Tab: Company Actions & Tab
   // ─────────────────────────────────────────────────────────────────────────
 
+  Future<void> _pickCompanyLogo() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['png', 'jpg', 'jpeg'],
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      final error = ValidationService.validateLogoFile(
+        fileName: file.name,
+        byteLength: file.size,
+      );
+      if (error != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      final originalPath = file.path;
+      if (originalPath == null) return;
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final logosDir = Directory(p.join(appDir.path, 'logos'));
+      if (!await logosDir.exists()) {
+        await logosDir.create(recursive: true);
+      }
+      final ext = p.extension(file.name).toLowerCase();
+      final targetRelative = 'logos/company_logo$ext';
+      final targetFile = File(p.join(appDir.path, targetRelative));
+      await File(originalPath).copy(targetFile.path);
+
+      if (mounted) {
+        setState(() {
+          _logoRelativePath = targetRelative;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل في اختيار الشعار: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _removeCompanyLogo() {
+    setState(() {
+      _logoRelativePath = null;
+    });
+  }
+
+  Future<void> _saveCompanySettings() async {
+    if (!(_companyFormKey.currentState?.validate() ?? false)) return;
+
+    setState(() => _isSavingCompany = true);
+    try {
+      final Map<String, String> updatedSettings = {
+        SettingsKeys.companyName: _companyNameController.text.trim(),
+        SettingsKeys.companyPhone: _companyPhoneController.text.trim(),
+        SettingsKeys.companyAddress: _companyAddressController.text.trim(),
+        SettingsKeys.currencySymbol: _currencyController.text.trim(),
+        SettingsKeys.companyTaxNumber: _companyTaxNumberController.text.trim(),
+        SettingsKeys.invoiceFooterNote: _invoiceFooterNoteController.text.trim(),
+        SettingsKeys.companyLogoPath: _logoRelativePath ?? '',
+      };
+
+      await context.read<SettingsCubit>().updateAllSettings(updatedSettings);
+      _syncInitialCompanyValues();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم حفظ الإعدادات بنجاح'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل في حفظ الإعدادات: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingCompany = false);
+      }
+    }
+  }
+
   Widget _buildCompanyTab(Map<String, String> settings) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        CustomTextField(
-            label: 'اسم الشركة', controller: _companyNameController),
-        const SizedBox(height: 12),
-        CustomTextField(
-            label: 'رقم هاتف الشركة',
-            controller: _companyPhoneController),
-        const SizedBox(height: 12),
-        CustomTextField(
-            label: 'عنوان الشركة',
-            controller: _companyAddressController),
-        const SizedBox(height: 12),
-        CustomTextField(
-            label: 'رمز العملة المستخدمة في التطبيق',
-            controller: _currencyController),
-        const SizedBox(height: 24),
-        CustomButton(
-          text: 'حفظ الإعدادات',
-          onPressed: () {
-            context.read<SettingsCubit>().updateAllSettings({
-              SettingsKeys.companyName: _companyNameController.text,
-              SettingsKeys.companyPhone: _companyPhoneController.text,
-              SettingsKeys.companyAddress: _companyAddressController.text,
-              SettingsKeys.currencySymbol: _currencyController.text,
-            });
-            _controllersInitialized = false;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('تم حفظ الإعدادات بنجاح')),
-            );
-          },
-        ),
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? AppColors.cardDark
-                : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? AppColors.darkGrey.withValues(alpha: 0.2)
-                  : Colors.grey.shade300,
+    File? logoFile;
+    if (_logoRelativePath != null && _logoRelativePath!.isNotEmpty) {
+      if (p.isAbsolute(_logoRelativePath!)) {
+        logoFile = File(_logoRelativePath!);
+      } else if (_appDocsDirPath != null) {
+        logoFile = File(p.join(_appDocsDirPath!, _logoRelativePath!));
+      }
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Form(
+      key: _companyFormKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Section Title
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.cardDark : Colors.blueGrey.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isDark
+                    ? AppColors.darkGrey.withValues(alpha: 0.2)
+                    : Colors.blueGrey.shade200,
+              ),
+            ),
+            child: Row(
+              children: const [
+                Icon(Icons.business, color: AppColors.primary, size: 22),
+                SizedBox(width: 8),
+                Text(
+                  'بيانات الشركة (تظهر في الفواتير المطبوعة)',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
             ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Column(
-                children: const [
-                  Text(
-                    'إصدار التطبيق',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12,
-                      color: AppColors.darkGrey,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    '1.0.0+1',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+          const SizedBox(height: 16),
+
+          // Logo Picker & Preview Section
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.cardDark : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark
+                    ? AppColors.darkGrey.withValues(alpha: 0.2)
+                    : Colors.grey.shade300,
               ),
-              const SizedBox(
-                height: 32,
-                child: VerticalDivider(),
-              ),
-              Column(
-                children: const [
-                  Text(
-                    'إصدار قاعدة البيانات',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12,
-                      color: AppColors.darkGrey,
-                    ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'شعار الشركة (اختياري - يظهر في رأس الفاتورة)',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'v${MigrationManager.currentVersion}',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                      child: (logoFile != null && logoFile.existsSync())
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(9),
+                              child: Image.file(logoFile, fit: BoxFit.cover),
+                            )
+                          : const Center(
+                              child: Icon(Icons.image_not_supported,
+                                  color: Colors.grey, size: 30),
+                            ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed:
+                                _isSavingCompany ? null : _pickCompanyLogo,
+                            icon: const Icon(Icons.upload_file, size: 18),
+                            label: Text(
+                              logoFile != null && logoFile.existsSync()
+                                  ? 'تغيير الشعار'
+                                  : 'اختيار شعار الشركة',
+                              style: const TextStyle(
+                                  fontFamily: 'Cairo', fontSize: 12),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                            ),
+                          ),
+                          if (logoFile != null && logoFile.existsSync()) ...[
+                            const SizedBox(height: 6),
+                            TextButton.icon(
+                              onPressed:
+                                  _isSavingCompany ? null : _removeCompanyLogo,
+                              icon: const Icon(Icons.delete_outline,
+                                  size: 18, color: AppColors.error),
+                              label: const Text(
+                                'حذف الشعار',
+                                style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 12,
+                                    color: AppColors.error),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+
+          CustomTextField(
+            label: 'اسم الشركة *',
+            controller: _companyNameController,
+            validator: ValidationService.validateCompanyName,
+            icon: Icons.store,
+          ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            label: 'رقم هاتف الشركة',
+            controller: _companyPhoneController,
+            keyboardType: TextInputType.phone,
+            validator: ValidationService.validateCompanyPhone,
+            icon: Icons.phone,
+          ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            label: 'عنوان الشركة',
+            controller: _companyAddressController,
+            icon: Icons.location_on,
+          ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            label: 'رمز العملة المستخدمة في التطبيق *',
+            controller: _currencyController,
+            validator: ValidationService.validateCurrencySymbol,
+            icon: Icons.monetization_on,
+          ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            label: 'الرقم الضريبي / السجل التجاري (اختياري)',
+            controller: _companyTaxNumberController,
+            icon: Icons.badge,
+          ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            label: 'ملاحظة أسفل الفاتورة (اختياري، مثلاً شروط أو كلمة شكر)',
+            controller: _invoiceFooterNoteController,
+            maxLines: 3,
+            icon: Icons.notes,
+          ),
+          const SizedBox(height: 24),
+          CustomButton(
+            text: 'حفظ الإعدادات',
+            isLoading: _isSavingCompany,
+            onPressed: _saveCompanySettings,
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.cardDark : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark
+                    ? AppColors.darkGrey.withValues(alpha: 0.2)
+                    : Colors.grey.shade300,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Column(
+                  children: const [
+                    Text(
+                      'إصدار التطبيق',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 12,
+                        color: AppColors.darkGrey,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '1.0.0+1',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(
+                  height: 32,
+                  child: VerticalDivider(),
+                ),
+                Column(
+                  children: const [
+                    Text(
+                      'إصدار قاعدة البيانات',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 12,
+                        color: AppColors.darkGrey,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'v${MigrationManager.currentVersion}',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
