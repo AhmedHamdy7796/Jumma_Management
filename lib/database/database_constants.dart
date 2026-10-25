@@ -226,7 +226,6 @@ abstract final class SettingsKeys {
 
   // Display
   static const String currencySymbol = 'currency_symbol';
-  static const String language = 'language';
   static const String themeMode = 'theme_mode';
 
   // Backup — local

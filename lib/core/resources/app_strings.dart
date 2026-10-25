@@ -92,7 +92,6 @@ class AppStrings {
   static const String enterCost = 'الرجاء إدخال التكلفة';
   static const String profile = 'الملف الشخصي';
   static const String settings = 'الإعدادات';
-  static const String language = 'اللغة';
   static const String theme = 'المظهر';
   static const String logout = 'تسجيل الخروج';
   static const String aboutApp = 'عن التطبيق';
