@@ -223,6 +223,8 @@ abstract final class SettingsKeys {
   static const String companyLogoPath = 'company_logo_path';
   static const String companyPhone = 'company_phone';
   static const String companyAddress = 'company_address';
+  static const String companyTaxNumber = 'company_tax_number';
+  static const String invoiceFooterNote = 'invoice_footer_note';
 
   // Display
   static const String currencySymbol = 'currency_symbol';

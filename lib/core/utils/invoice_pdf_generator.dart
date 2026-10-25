@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:gomaa_management/core/utils/company_pdf_data.dart';
 import 'package:gomaa_management/core/utils/invoice_calculator.dart';
-import 'package:gomaa_management/database/database_constants.dart';
 import 'package:gomaa_management/models/sales_invoice_model.dart';
 import 'package:gomaa_management/repositories/settings_repository.dart';
 
@@ -70,20 +72,21 @@ class InvoicePdfGenerator {
     final arabicFont = _cachedRegular ?? pw.Font.helvetica();
     final arabicBold = _cachedBold ?? pw.Font.helveticaBold();
 
-    // Company Settings from database
-    final companyName = (settings[SettingsKeys.companyName]?.trim().isNotEmpty == true)
-        ? settings[SettingsKeys.companyName]!.trim()
-        : 'مؤسسة جمعة';
-    final companyPhone = settings[SettingsKeys.companyPhone]?.trim() ?? '';
-    final companyAddress = settings[SettingsKeys.companyAddress]?.trim() ?? '';
-    final customLogoPath = settings[SettingsKeys.companyLogoPath]?.trim();
+    // Company Settings from database mapped cleanly
+    final companyData = CompanyPdfData.fromSettings(settings);
 
-    // Try loading logo: custom file first, then asset fallback
+    // Try loading logo: custom file first (absolute or relative to App Documents), then asset fallback
     pw.ImageProvider? logoImage;
-    if (customLogoPath != null && customLogoPath.isNotEmpty) {
+    if (companyData.logoPath != null && companyData.logoPath!.isNotEmpty) {
       try {
-        final file = File(customLogoPath);
-        if (file.existsSync()) {
+        File file;
+        if (p.isAbsolute(companyData.logoPath!)) {
+          file = File(companyData.logoPath!);
+        } else {
+          final appDir = await getApplicationDocumentsDirectory();
+          file = File(p.join(appDir.path, companyData.logoPath!));
+        }
+        if (await file.exists()) {
           logoImage = pw.MemoryImage(await file.readAsBytes());
         }
       } catch (_) {
@@ -111,7 +114,7 @@ class InvoicePdfGenerator {
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
             // ── Header ─────────────────────────────────────────────────
-            _buildHeader(companyName, companyPhone, companyAddress, logoImage, arabicFont, arabicBold),
+            _buildHeader(companyData, logoImage, arabicFont, arabicBold),
 
             // ── Gold separator ──────────────────────────────────────────
             pw.Container(height: 4, color: _gold),
@@ -149,6 +152,26 @@ class InvoicePdfGenerator {
                       _buildNotesSection(invoice, arabicFont, arabicBold),
                     ],
 
+                    // Invoice Footer Note (from company settings, e.g. terms or thanks)
+                    if (companyData.footerNote != null) ...[
+                      pw.SizedBox(height: 12),
+                      pw.Container(
+                        width: double.infinity,
+                        padding: const pw.EdgeInsets.all(8),
+                        decoration: pw.BoxDecoration(
+                          color: PdfColors.white,
+                          border: pw.Border.all(color: _tableLine, width: 0.8),
+                          borderRadius: pw.BorderRadius.circular(6),
+                        ),
+                        child: pw.Text(
+                          companyData.footerNote!,
+                          textAlign: pw.TextAlign.center,
+                          textDirection: pw.TextDirection.rtl,
+                          style: pw.TextStyle(font: arabicFont, fontSize: 9, color: _bodyText),
+                        ),
+                      ),
+                    ],
+
                     pw.Spacer(),
 
                     // Signatures
@@ -161,7 +184,12 @@ class InvoicePdfGenerator {
             ),
 
             // ── Footer ──────────────────────────────────────────────────
-            _buildFooter(companyAddress, companyPhone, arabicFont, arabicBold),
+            _buildFooter(
+              companyData.companyAddress ?? '',
+              companyData.companyPhone ?? '',
+              arabicFont,
+              arabicBold,
+            ),
           ],
         ),
       ),
@@ -172,9 +200,7 @@ class InvoicePdfGenerator {
 
   // ─────────────────────────────────────────── Header ──
   static pw.Widget _buildHeader(
-    String companyName,
-    String companyPhone,
-    String companyAddress,
+    CompanyPdfData company,
     pw.ImageProvider? logoImage,
     pw.Font arabicFont,
     pw.Font arabicBold,
@@ -218,7 +244,7 @@ class InvoicePdfGenerator {
                 crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
                   pw.Text(
-                    companyName,
+                    company.companyName,
                     textDirection: pw.TextDirection.rtl,
                     style: pw.TextStyle(
                       font: arabicBold,
@@ -226,15 +252,39 @@ class InvoicePdfGenerator {
                       color: PdfColors.white,
                     ),
                   ),
-                  if (companyPhone.isNotEmpty) ...[
+                  if (company.companyPhone != null) ...[
                     pw.SizedBox(height: 3),
                     pw.Text(
-                      'هاتف: $companyPhone',
+                      'هاتف: ${company.companyPhone}',
                       textDirection: pw.TextDirection.rtl,
                       style: pw.TextStyle(
                         font: arabicFont,
                         fontSize: 10,
                         color: PdfColors.white,
+                      ),
+                    ),
+                  ],
+                  if (company.companyAddress != null) ...[
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      company.companyAddress!,
+                      textDirection: pw.TextDirection.rtl,
+                      style: pw.TextStyle(
+                        font: arabicFont,
+                        fontSize: 10,
+                        color: PdfColors.white,
+                      ),
+                    ),
+                  ],
+                  if (company.taxNumber != null) ...[
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'الرقم الضريبي: ${company.taxNumber}',
+                      textDirection: pw.TextDirection.rtl,
+                      style: pw.TextStyle(
+                        font: arabicFont,
+                        fontSize: 10,
+                        color: _gold,
                       ),
                     ),
                   ],
