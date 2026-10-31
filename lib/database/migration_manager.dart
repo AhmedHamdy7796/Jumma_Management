@@ -73,13 +73,20 @@ class MigrationManager {
               '${now.day.toString().padLeft(2, '0')}_'
               '${now.hour.toString().padLeft(2, '0')}'
               '${now.minute.toString().padLeft(2, '0')}'
-              '${now.second.toString().padLeft(2, '0')}';
-          final safetyPath = p.join(
+              '${now.second.toString().padLeft(2, '0')}_'
+              '${now.millisecond.toString().padLeft(3, '0')}';
+          String safetyPath = p.join(
             dir.path,
             'pre_upgrade_safety_v${existingVersion}_to_v${currentVersion}_$stamp.db',
           );
-          final safetyFile = File(safetyPath);
-          if (safetyFile.existsSync()) safetyFile.deleteSync();
+          int counter = 1;
+          while (File(safetyPath).existsSync()) {
+            safetyPath = p.join(
+              dir.path,
+              'pre_upgrade_safety_v${existingVersion}_to_v${currentVersion}_${stamp}_$counter.db',
+            );
+            counter++;
+          }
 
           await roDb.execute("VACUUM INTO '${safetyPath.replaceAll("'", "''")}'");
           AppLogger.instance.info(

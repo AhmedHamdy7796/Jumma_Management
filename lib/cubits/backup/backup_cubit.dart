@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
+import 'package:gomaa_management/core/errors/app_exception.dart';
 import 'package:gomaa_management/services/backup_service.dart';
 
 // ─── States ──────────────────────────────────────────────────────────────────
@@ -75,7 +76,8 @@ class BackupCubit extends Cubit<BackupState> {
         ));
       }
     } catch (e) {
-      if (!isClosed) emit(BackupError(e.toString()));
+      final msg = e is AppException ? e.userMessage : e.toString();
+      if (!isClosed) emit(BackupError(msg));
     }
   }
 
@@ -93,7 +95,8 @@ class BackupCubit extends Cubit<BackupState> {
         ));
       }
     } catch (e) {
-      if (!isClosed) emit(BackupError(e.toString()));
+      final msg = e is AppException ? e.userMessage : e.toString();
+      if (!isClosed) emit(BackupError(msg));
     }
   }
 
@@ -114,7 +117,8 @@ class BackupCubit extends Cubit<BackupState> {
       if (!isClosed) emit(RestoreSuccess());
       onRestoreComplete?.call();
     } catch (e) {
-      if (!isClosed) emit(BackupError(e.toString()));
+      final msg = e is AppException ? e.userMessage : 'فشلت عملية الاستعادة. يرجى المحاولة مرة أخرى.';
+      if (!isClosed) emit(BackupError(msg));
     }
   }
 
@@ -128,7 +132,8 @@ class BackupCubit extends Cubit<BackupState> {
       if (!isClosed) emit(RestoreSuccess());
       onRestoreComplete?.call();
     } catch (e) {
-      if (!isClosed) emit(BackupError(e.toString()));
+      final msg = e is AppException ? e.userMessage : 'فشلت عملية الاستعادة. يرجى المحاولة مرة أخرى.';
+      if (!isClosed) emit(BackupError(msg));
     }
   }
 }

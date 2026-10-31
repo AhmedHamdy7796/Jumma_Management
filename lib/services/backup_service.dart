@@ -194,9 +194,12 @@ class BackupService {
           '${now.second.toString().padLeft(2, '0')}_'
           '${now.millisecond.toString().padLeft(3, '0')}';
       final safetyDir = await localBackupsDir;
-      final safetyPath = p.join(safetyDir.path, 'pre_restore_safety_$stamp.db');
-      final safetyFile = File(safetyPath);
-      if (safetyFile.existsSync()) safetyFile.deleteSync();
+      String safetyPath = p.join(safetyDir.path, 'pre_restore_safety_$stamp.db');
+      int counter = 1;
+      while (File(safetyPath).existsSync()) {
+        safetyPath = p.join(safetyDir.path, 'pre_restore_safety_${stamp}_$counter.db');
+        counter++;
+      }
 
       final db = await _dbService.database;
       await db.execute("VACUUM INTO '${safetyPath.replaceAll("'", "''")}'");
@@ -263,7 +266,7 @@ class BackupService {
 
     if (result == null || result.files.isEmpty) return false;
     final path = result.files.single.path;
-    if (path == null) return false;
+    if (path == null || path.trim().isEmpty) return false;
 
     await restoreFromFile(path);
     return true;

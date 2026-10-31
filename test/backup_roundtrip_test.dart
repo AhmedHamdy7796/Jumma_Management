@@ -40,6 +40,37 @@ class _CancelledFilePicker extends FilePicker {
   }
 }
 
+class _EmptyPathFilePicker extends FilePicker {
+  @override
+  Future<String?> getDirectoryPath({
+    String? dialogTitle,
+    bool lockParentWindow = false,
+    String? initialDirectory,
+  }) async {
+    return '   '; // Simulate empty string
+  }
+
+  @override
+  Future<FilePickerResult?> pickFiles({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Function(FilePickerStatus)? onFileLoading,
+    bool allowCompression = true,
+    int compressionQuality = 30,
+    bool allowMultiple = false,
+    bool withData = false,
+    bool withReadStream = false,
+    bool lockParentWindow = false,
+    bool readSequential = false,
+  }) async {
+    return FilePickerResult([
+      PlatformFile(name: 'empty.db', size: 0, path: '   '),
+    ]);
+  }
+}
+
 void main() {
   setUpAll(() {
     sqfliteFfiInit();
@@ -589,21 +620,44 @@ void main() {
       expect(machinesV10.first[CustomerMachineColumns.capacity], isNull);
     });
 
-    test('5. Cancelled picker (null path) creates nothing', () async {
+    test('5. Picker cancel (null or empty string) in backup and restore aborts silently', () async {
+      final db = await dbService.database;
+      await db.insert(TableNames.customers, {
+        CustomerColumns.name: 'عميل اختبار الإلغاء',
+        CustomerColumns.mobilePhone: '01011112222',
+      });
+
+      // 1. Cancelled backup picker (null path)
       FilePicker.platform = _CancelledFilePicker();
+      final backupNullResult = await backupService.createBackupWithPicker();
+      expect(backupNullResult, isNull);
 
-      final existingFilesCount = Directory(backupsDir).existsSync()
-          ? Directory(backupsDir).listSync().length
-          : 0;
+      // 2. Cancelled backup picker (empty string path)
+      FilePicker.platform = _EmptyPathFilePicker();
+      final backupEmptyResult = await backupService.createBackupWithPicker();
+      expect(backupEmptyResult, isNull);
 
-      final result = await backupService.createBackupWithPicker();
-      expect(result, isNull);
+      // 3. Cancelled restore picker (null path)
+      FilePicker.platform = _CancelledFilePicker();
+      final restoreNullResult = await backupService.restoreWithPicker();
+      expect(restoreNullResult, isFalse);
 
-      final afterFilesCount = Directory(backupsDir).existsSync()
-          ? Directory(backupsDir).listSync().length
-          : 0;
+      // 4. Cancelled restore picker (empty string path)
+      FilePicker.platform = _EmptyPathFilePicker();
+      final restoreEmptyResult = await backupService.restoreWithPicker();
+      expect(restoreEmptyResult, isFalse);
 
-      expect(afterFilesCount, equals(existingFilesCount));
+      // Verify no backup or safety copies created
+      final backupFiles = Directory(backupsDir).existsSync()
+          ? Directory(backupsDir).listSync()
+          : [];
+      expect(backupFiles, isEmpty);
+
+      // Verify live DB untouched and connection remains valid
+      final count = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM ${TableNames.customers}'),
+      );
+      expect(count, 1);
     });
   });
 }
