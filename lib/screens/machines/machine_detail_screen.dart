@@ -95,34 +95,53 @@ class _MachineDetailView extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${machine.machineType} - ${machine.model}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Cairo',
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.person_outline, color: Colors.white70, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              'العميل: $customerName',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 13,
-                                fontFamily: 'Cairo',
-                              ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${machine.brand != null && machine.brand!.isNotEmpty ? "${machine.brand} - " : ""}${machine.machineType} - ${machine.model}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.person_outline, color: Colors.white70, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                'العميل: $customerName',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                  fontFamily: 'Cairo',
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white24,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  machine.sourceDisplayName,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -143,6 +162,10 @@ class _MachineDetailView extends StatelessWidget {
                   spacing: 20,
                   runSpacing: 8,
                   children: [
+                    if (machine.brand != null && machine.brand!.isNotEmpty)
+                      _metaItem(Icons.branding_watermark_outlined, 'الماركة: ${machine.brand}'),
+                    if (machine.capacity != null && machine.capacity!.isNotEmpty)
+                      _metaItem(Icons.speed, 'السعة: ${machine.capacity}'),
                     if (machine.serialNumber != null && machine.serialNumber!.isNotEmpty)
                       _metaItem(Icons.qr_code, 'سيريال: ${machine.serialNumber}'),
                     if (machine.manufactureYear != null)

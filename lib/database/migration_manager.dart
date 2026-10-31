@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
 import 'package:gomaa_management/core/logging/app_logger.dart';
+import 'package:gomaa_management/database/database_constants.dart';
 
 /// Responsible for all SQLite schema migrations.
 ///
@@ -21,7 +22,7 @@ class MigrationManager {
   /// The current schema version. Increment this every time a new migration
   /// is added. [DatabaseService] uses this as the `version` argument to
   /// [openDatabase].
-  static const int currentVersion = 11;
+  static const int currentVersion = 12;
 
   static const _tag = 'MigrationManager';
 
@@ -38,6 +39,7 @@ class MigrationManager {
     _Migration(version: 9, up: _v9RefactorSchema),
     _Migration(version: 10, up: _v10AddCustomerMachinesAndParts),
     _Migration(version: 11, up: _v11AddInvoiceCompositeIndexes),
+    _Migration(version: 12, up: _v12AddCustomerMachineOwnershipColumns),
   ];
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -659,6 +661,33 @@ class MigrationManager {
       'CREATE INDEX IF NOT EXISTS idx_sales_item ON sales_invoices(itemName)',
     );
     AppLogger.instance.info('Migration v11 applied successfully.', tag: _tag);
+  }
+
+  static Future<void> _v12AddCustomerMachineOwnershipColumns(Database db) async {
+    AppLogger.instance.info('Applying migration v12: customer machine ownership and specs columns...', tag: _tag);
+
+    final columns = await db.rawQuery('PRAGMA table_info(customer_machines)');
+    final columnNames = columns.map((c) => c['name'] as String).toSet();
+
+    if (!columnNames.contains(CustomerMachineColumns.source)) {
+      await db.execute(
+        "ALTER TABLE ${TableNames.customerMachines} ADD COLUMN ${CustomerMachineColumns.source} TEXT NOT NULL DEFAULT '${MachineSourceValues.other}'",
+      );
+    }
+    if (!columnNames.contains(CustomerMachineColumns.brand)) {
+      await db.execute(
+        'ALTER TABLE ${TableNames.customerMachines} ADD COLUMN ${CustomerMachineColumns.brand} TEXT',
+      );
+    }
+    if (!columnNames.contains(CustomerMachineColumns.capacity)) {
+      await db.execute(
+        'ALTER TABLE ${TableNames.customerMachines} ADD COLUMN ${CustomerMachineColumns.capacity} TEXT',
+      );
+    }
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_machines_brand ON ${TableNames.customerMachines}(${CustomerMachineColumns.brand})',
+    );
+    AppLogger.instance.info('Migration v12 applied successfully.', tag: _tag);
   }
 }
 

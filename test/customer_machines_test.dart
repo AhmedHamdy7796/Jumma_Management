@@ -23,6 +23,9 @@ void main() {
         serialNumber: 'SN-12345',
         installDate: now,
         notes: 'ملاحظات تجريبية',
+        source: 'ours',
+        brand: 'Atlas Copco',
+        capacity: '37 kW',
         createdAt: now,
       );
 
@@ -35,6 +38,28 @@ void main() {
       expect(fromMap.model, 'GA-37');
       expect(fromMap.manufactureYear, 2022);
       expect(fromMap.serialNumber, 'SN-12345');
+      expect(fromMap.source, 'ours');
+      expect(fromMap.isOurs, isTrue);
+      expect(fromMap.brand, 'Atlas Copco');
+      expect(fromMap.capacity, '37 kW');
+
+      // Test minimal creation with only type + model
+      final minimalMachine = MachineModel(
+        customerId: 5,
+        machineType: 'مجفف',
+        model: 'FX-5',
+        createdAt: now,
+      );
+      expect(minimalMachine.source, 'other');
+      expect(minimalMachine.brand, isNull);
+      expect(minimalMachine.capacity, isNull);
+      expect(minimalMachine.sourceDisplayName, 'من مورد آخر');
+
+      final minimalMap = minimalMachine.toMap();
+      final fromMinimal = MachineModel.fromMap(minimalMap);
+      expect(fromMinimal.source, 'other');
+      expect(fromMinimal.brand, isNull);
+      expect(fromMinimal.capacity, isNull);
 
       // Year validation
       expect(ValidationService.validateManufactureYear(null), isNull);

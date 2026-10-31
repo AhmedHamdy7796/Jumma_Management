@@ -88,6 +88,9 @@ void main() {
         CustomerMachineColumns.customerId: custId,
         CustomerMachineColumns.machineType: 'ضاغط حلزوني',
         CustomerMachineColumns.model: 'Atlas-GA37',
+        CustomerMachineColumns.source: MachineSourceValues.ours,
+        CustomerMachineColumns.brand: 'Atlas Copco',
+        CustomerMachineColumns.capacity: '37 kW',
         CustomerMachineColumns.manufactureYear: 2021,
         CustomerMachineColumns.serialNumber: 'SN-778899',
         CustomerMachineColumns.installDate: '2021-05-10',
@@ -577,6 +580,9 @@ void main() {
       final machinesV10 = await liveDb.query(TableNames.customerMachines);
       expect(machinesV10.length, 1);
       expect(machinesV10.first[CustomerMachineColumns.model], 'HYDRO-50');
+      expect(machinesV10.first[CustomerMachineColumns.source], 'other');
+      expect(machinesV10.first[CustomerMachineColumns.brand], isNull);
+      expect(machinesV10.first[CustomerMachineColumns.capacity], isNull);
     });
 
     test('5. Cancelled picker (null path) creates nothing', () async {

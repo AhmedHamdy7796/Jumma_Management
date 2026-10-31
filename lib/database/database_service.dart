@@ -274,6 +274,9 @@ class DatabaseService {
           serial_number    TEXT,
           install_date     TEXT,
           notes            TEXT,
+          source           TEXT    NOT NULL DEFAULT 'other',
+          brand            TEXT,
+          capacity         TEXT,
           created_at       TEXT    NOT NULL
         )
       ''');
@@ -422,6 +425,9 @@ class DatabaseService {
       );
       await txn.execute(
         'CREATE INDEX idx_customer_machines_serial ON customer_machines(serial_number)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_customer_machines_brand ON customer_machines(brand)',
       );
 
       // machine_parts

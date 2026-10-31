@@ -558,24 +558,69 @@ class _CustomerDetailView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '${machine.machineType} - ${machine.model}',
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        if (machine.serialNumber != null &&
-                            machine.serialNumber!.isNotEmpty)
-                          Text(
-                            'رقم تسلسلي: ${machine.serialNumber}',
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 12,
-                              color: AppColors.darkGrey,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${machine.brand != null && machine.brand!.isNotEmpty ? "${machine.brand} - " : ""}${machine.machineType} - ${machine.model}',
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
                             ),
                           ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: machine.isOurs
+                                  ? AppColors.primary.withValues(alpha: 0.12)
+                                  : Colors.grey.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: machine.isOurs
+                                    ? AppColors.primary.withValues(alpha: 0.3)
+                                    : Colors.grey.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              machine.sourceDisplayName,
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: machine.isOurs ? AppColors.primary : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Wrap(
+                        spacing: 12,
+                        children: [
+                          if (machine.capacity != null && machine.capacity!.isNotEmpty)
+                            Text(
+                              'السعة: ${machine.capacity}',
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 12,
+                                color: AppColors.primaryAccent,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          if (machine.serialNumber != null &&
+                              machine.serialNumber!.isNotEmpty)
+                            Text(
+                              'رقم تسلسلي: ${machine.serialNumber}',
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 12,
+                                color: AppColors.darkGrey,
+                              ),
+                            ),
+                        ],
+                      ),
                       ],
                     ),
                   ),

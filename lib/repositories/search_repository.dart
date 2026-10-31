@@ -42,9 +42,13 @@ class SearchRepository implements ISearchRepository {
           FROM ${TableNames.inventory} 
           WHERE ${InventoryColumns.name} LIKE ? OR ${InventoryColumns.model} LIKE ?
         UNION ALL
-        SELECT '${AuditEntityType.customerMachine}' AS type, ${CustomerMachineColumns.id} AS id, ${CustomerMachineColumns.model} AS title, COALESCE(${CustomerMachineColumns.serialNumber}, '') AS subtitle
+        SELECT '${AuditEntityType.customerMachine}' AS type, ${CustomerMachineColumns.id} AS id, 
+               CASE WHEN ${CustomerMachineColumns.brand} IS NOT NULL AND ${CustomerMachineColumns.brand} != '' 
+                    THEN ${CustomerMachineColumns.brand} || ' - ' || ${CustomerMachineColumns.model} 
+                    ELSE ${CustomerMachineColumns.model} END AS title, 
+               COALESCE(${CustomerMachineColumns.serialNumber}, '') AS subtitle
           FROM ${TableNames.customerMachines}
-          WHERE ${CustomerMachineColumns.model} LIKE ? OR ${CustomerMachineColumns.serialNumber} LIKE ?
+          WHERE ${CustomerMachineColumns.model} LIKE ? OR ${CustomerMachineColumns.serialNumber} LIKE ? OR ${CustomerMachineColumns.brand} LIKE ?
         LIMIT 50
       ''';
 
@@ -55,7 +59,7 @@ class SearchRepository implements ISearchRepository {
           wildCardQuery, wildCardQuery, // purchase
           wildCardQuery, wildCardQuery, // fix
           wildCardQuery, wildCardQuery, // inventory
-          wildCardQuery, wildCardQuery, // customer machine
+          wildCardQuery, wildCardQuery, wildCardQuery, // customer machine (model, serial, brand)
         ],
       );
 

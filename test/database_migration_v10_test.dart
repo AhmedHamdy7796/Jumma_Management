@@ -222,5 +222,91 @@ void main() {
       await db.close();
       tempDir.deleteSync(recursive: true);
     });
+
+    test('Upgrade from v11 to v12 adds source, brand, capacity columns and creates safety copy', () async {
+      final tempDir = Directory.systemTemp.createTempSync('upgrade_v12_test_');
+      final dbPath = p.join(tempDir.path, 'upgrade_v12.db');
+
+      // 1. Create a v11 database
+      var db = await openDatabase(
+        dbPath,
+        version: 11,
+        onCreate: (db, version) async {
+          await db.execute('''
+            CREATE TABLE customers (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              mobilePhone TEXT NOT NULL,
+              companyName TEXT,
+              address TEXT,
+              notes TEXT NOT NULL DEFAULT ''
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE customer_machines (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+              machine_type TEXT NOT NULL,
+              model TEXT NOT NULL,
+              manufacture_year INTEGER,
+              serial_number TEXT,
+              install_date TEXT,
+              notes TEXT,
+              created_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE sales_invoices (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              customerId INTEGER NOT NULL,
+              itemName TEXT NOT NULL,
+              remainingBalance REAL NOT NULL DEFAULT 0
+            )
+          ''');
+        },
+      );
+
+      final custId = await db.insert('customers', {
+        'name': 'شركة الاتحاد',
+        'mobilePhone': '01055554444',
+      });
+      await db.insert('customer_machines', {
+        'customer_id': custId,
+        'machine_type': 'ضاغط حلزوني',
+        'model': 'Atlas GA-45',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      await db.close();
+
+      // 2. Pre-upgrade safety copy
+      final backupsDir = p.join(tempDir.path, 'backups');
+      await MigrationManager.createSafetyCopyBeforeUpgrade(dbPath, backupsDir);
+      final backupFiles = Directory(backupsDir).listSync().whereType<File>().toList();
+      expect(backupFiles.isNotEmpty, isTrue);
+      expect(backupFiles.first.path.contains('pre_upgrade_safety_v11_to_v12_'), isTrue);
+
+      // 3. Migrate to v12
+      db = await openDatabase(
+        dbPath,
+        version: 12,
+        onUpgrade: MigrationManager.migrate,
+      );
+
+      final cols = await db.rawQuery('PRAGMA table_info(customer_machines)');
+      final colNames = cols.map((c) => c['name'] as String).toSet();
+      expect(colNames.contains(CustomerMachineColumns.source), isTrue);
+      expect(colNames.contains(CustomerMachineColumns.brand), isTrue);
+      expect(colNames.contains(CustomerMachineColumns.capacity), isTrue);
+
+      // Check existing row got default 'other' for source and null for brand/capacity
+      final machines = await db.query('customer_machines');
+      expect(machines.length, 1);
+      expect(machines.first['source'], 'other');
+      expect(machines.first['brand'], isNull);
+      expect(machines.first['capacity'], isNull);
+
+      await db.close();
+      tempDir.deleteSync(recursive: true);
+    });
   });
 }

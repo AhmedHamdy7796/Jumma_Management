@@ -167,8 +167,9 @@ class MachineRepository implements IMachineRepository {
       final wildCard = '%$query%';
       final List<Map<String, dynamic>> maps = await db.query(
         TableNames.customerMachines,
-        where: '${CustomerMachineColumns.model} LIKE ? OR ${CustomerMachineColumns.serialNumber} LIKE ? OR ${CustomerMachineColumns.machineType} LIKE ?',
-        whereArgs: [wildCard, wildCard, wildCard],
+        where:
+            '${CustomerMachineColumns.model} LIKE ? OR ${CustomerMachineColumns.serialNumber} LIKE ? OR ${CustomerMachineColumns.machineType} LIKE ? OR ${CustomerMachineColumns.brand} LIKE ?',
+        whereArgs: [wildCard, wildCard, wildCard, wildCard],
         orderBy: '${CustomerMachineColumns.createdAt} DESC',
       );
       return List.generate(maps.length, (i) => MachineModel.fromMap(maps[i]));

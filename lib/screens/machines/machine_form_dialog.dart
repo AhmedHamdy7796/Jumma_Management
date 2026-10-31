@@ -5,6 +5,7 @@ import 'package:gomaa_management/core/utils/date_formatter.dart';
 import 'package:gomaa_management/core/widgets/custom_button.dart';
 import 'package:gomaa_management/core/widgets/custom_text_field.dart';
 import 'package:gomaa_management/cubits/machine/machine_cubit.dart';
+import 'package:gomaa_management/database/database_constants.dart';
 import 'package:gomaa_management/models/machine_model.dart';
 import 'package:gomaa_management/services/validation_service.dart';
 
@@ -44,9 +45,12 @@ class _MachineFormDialogState extends State<MachineFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _typeController = TextEditingController();
   final _modelController = TextEditingController();
+  final _brandController = TextEditingController();
+  final _capacityController = TextEditingController();
   final _yearController = TextEditingController();
   final _serialController = TextEditingController();
   final _notesController = TextEditingController();
+  String _source = MachineSourceValues.other;
   DateTime? _installDate;
   bool _isSaving = false;
 
@@ -65,6 +69,9 @@ class _MachineFormDialogState extends State<MachineFormDialog> {
       final m = widget.machine!;
       _typeController.text = m.machineType;
       _modelController.text = m.model;
+      _brandController.text = m.brand ?? '';
+      _capacityController.text = m.capacity ?? '';
+      _source = m.source;
       _yearController.text = m.manufactureYear?.toString() ?? '';
       _serialController.text = m.serialNumber ?? '';
       _notesController.text = m.notes ?? '';
@@ -76,6 +83,8 @@ class _MachineFormDialogState extends State<MachineFormDialog> {
   void dispose() {
     _typeController.dispose();
     _modelController.dispose();
+    _brandController.dispose();
+    _capacityController.dispose();
     _yearController.dispose();
     _serialController.dispose();
     _notesController.dispose();
@@ -102,6 +111,8 @@ class _MachineFormDialogState extends State<MachineFormDialog> {
       final yearText = _yearController.text.trim();
       final year = yearText.isNotEmpty ? int.tryParse(yearText) : null;
       final serialText = _serialController.text.trim();
+      final brandText = _brandController.text.trim();
+      final capacityText = _capacityController.text.trim();
       final notesText = _notesController.text.trim();
 
       if (widget.machine == null) {
@@ -109,6 +120,9 @@ class _MachineFormDialogState extends State<MachineFormDialog> {
           customerId: widget.customerId,
           machineType: _typeController.text.trim(),
           model: _modelController.text.trim(),
+          source: _source,
+          brand: brandText.isNotEmpty ? brandText : null,
+          capacity: capacityText.isNotEmpty ? capacityText : null,
           manufactureYear: year,
           serialNumber: serialText.isNotEmpty ? serialText : null,
           installDate: _installDate,
@@ -120,6 +134,9 @@ class _MachineFormDialogState extends State<MachineFormDialog> {
         final updatedMachine = widget.machine!.copyWith(
           machineType: _typeController.text.trim(),
           model: _modelController.text.trim(),
+          source: _source,
+          brand: brandText.isNotEmpty ? brandText : null,
+          capacity: capacityText.isNotEmpty ? capacityText : null,
           manufactureYear: year,
           serialNumber: serialText.isNotEmpty ? serialText : null,
           installDate: _installDate,
@@ -217,6 +234,96 @@ class _MachineFormDialogState extends State<MachineFormDialog> {
                   child: ListView(
                     shrinkWrap: true,
                     children: [
+                      // Source segmented choice
+                      const Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'مصدر الماكينة *',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.darkGrey.withValues(alpha: 0.15)
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark
+                                ? AppColors.darkGrey.withValues(alpha: 0.3)
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _source = MachineSourceValues.ours),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 9),
+                                  decoration: BoxDecoration(
+                                    color: _source == MachineSourceValues.ours
+                                        ? AppColors.primary
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  child: Text(
+                                    'منّا (توريدنا)',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 13,
+                                      fontWeight: _source == MachineSourceValues.ours
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: _source == MachineSourceValues.ours
+                                          ? Colors.white
+                                          : (isDark ? Colors.white70 : Colors.black87),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _source = MachineSourceValues.other),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 9),
+                                  decoration: BoxDecoration(
+                                    color: _source == MachineSourceValues.other
+                                        ? AppColors.primary
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  child: Text(
+                                    'من مورد آخر',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 13,
+                                      fontWeight: _source == MachineSourceValues.other
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: _source == MachineSourceValues.other
+                                          ? Colors.white
+                                          : (isDark ? Colors.white70 : Colors.black87),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
                       // Machine Type
                       CustomTextField(
                         controller: _typeController,
@@ -263,6 +370,22 @@ class _MachineFormDialogState extends State<MachineFormDialog> {
                           v,
                           'موديل الماكينة مطلوب',
                         ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Brand
+                      CustomTextField(
+                        controller: _brandController,
+                        label: 'الماركة / الشركة المصنعة (Brand)',
+                        hint: 'مثال: Atlas Copco, Ingersoll Rand, Kaeser',
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Capacity
+                      CustomTextField(
+                        controller: _capacityController,
+                        label: 'القدرة / السعة (Capacity)',
+                        hint: 'مثال: 37 kW, 50 HP, 10 bar, 500 L',
                       ),
                       const SizedBox(height: 16),
 

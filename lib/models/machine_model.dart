@@ -10,6 +10,9 @@ class MachineModel {
   final String? serialNumber;
   final DateTime? installDate;
   final String? notes;
+  final String source;
+  final String? brand;
+  final String? capacity;
   final DateTime createdAt;
 
   const MachineModel({
@@ -21,8 +24,14 @@ class MachineModel {
     this.serialNumber,
     this.installDate,
     this.notes,
+    this.source = MachineSourceValues.other,
+    this.brand,
+    this.capacity,
     required this.createdAt,
   });
+
+  bool get isOurs => source == MachineSourceValues.ours;
+  String get sourceDisplayName => isOurs ? 'منّا' : 'من مورد آخر';
 
   Map<String, dynamic> toMap() {
     return {
@@ -34,6 +43,9 @@ class MachineModel {
       CustomerMachineColumns.serialNumber: serialNumber,
       CustomerMachineColumns.installDate: installDate?.toIso8601String(),
       CustomerMachineColumns.notes: notes,
+      CustomerMachineColumns.source: source,
+      CustomerMachineColumns.brand: brand,
+      CustomerMachineColumns.capacity: capacity,
       CustomerMachineColumns.createdAt: createdAt.toIso8601String(),
     };
   }
@@ -50,6 +62,9 @@ class MachineModel {
           ? DateTime.tryParse(map[CustomerMachineColumns.installDate] as String)
           : null,
       notes: map[CustomerMachineColumns.notes] as String?,
+      source: (map[CustomerMachineColumns.source] as String?) ?? MachineSourceValues.other,
+      brand: map[CustomerMachineColumns.brand] as String?,
+      capacity: map[CustomerMachineColumns.capacity] as String?,
       createdAt: DateTime.parse(
         map[CustomerMachineColumns.createdAt] as String,
       ),
@@ -65,6 +80,9 @@ class MachineModel {
     String? serialNumber,
     DateTime? installDate,
     String? notes,
+    String? source,
+    String? brand,
+    String? capacity,
     DateTime? createdAt,
   }) {
     return MachineModel(
@@ -76,13 +94,16 @@ class MachineModel {
       serialNumber: serialNumber ?? this.serialNumber,
       installDate: installDate ?? this.installDate,
       notes: notes ?? this.notes,
+      source: source ?? this.source,
+      brand: brand ?? this.brand,
+      capacity: capacity ?? this.capacity,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
   String toString() =>
-      'MachineModel(id: $id, customerId: $customerId, model: $model, type: $machineType)';
+      'MachineModel(id: $id, customerId: $customerId, model: $model, type: $machineType, source: $source, brand: $brand, capacity: $capacity)';
 
   @override
   bool operator ==(Object other) =>

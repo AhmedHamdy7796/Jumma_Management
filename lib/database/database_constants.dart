@@ -153,7 +153,15 @@ abstract final class CustomerMachineColumns {
   static const String serialNumber = 'serial_number';
   static const String installDate = 'install_date';
   static const String notes = 'notes';
+  static const String source = 'source';
+  static const String brand = 'brand';
+  static const String capacity = 'capacity';
   static const String createdAt = 'created_at';
+}
+
+abstract final class MachineSourceValues {
+  static const String ours = 'ours';
+  static const String other = 'other';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
