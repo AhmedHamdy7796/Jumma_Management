@@ -22,7 +22,7 @@ import 'package:gomaa_management/database/migration_manager.dart';
 /// final rows = await db.query('customers');
 /// ```
 class DatabaseService {
-  DatabaseService._();
+  DatabaseService._() : _customDbPath = null;
 
   /// Singleton instance. Inject this into every repository via constructor.
   static final DatabaseService instance = DatabaseService._();
@@ -50,7 +50,7 @@ class DatabaseService {
   ///
   /// Used by [BackupService] to locate the file for copying.
   Future<String> get databasePath async {
-    if (_customDbPath != null) return _customDbPath!;
+    if (_customDbPath != null) return _customDbPath;
     final dir = await getApplicationSupportDirectory();
     return join(dir.path, _dbFileName);
   }
@@ -80,7 +80,7 @@ class DatabaseService {
       final String backupsDir;
 
       if (_customDbPath != null) {
-        path = _customDbPath!;
+        path = _customDbPath;
         final parentDir = Directory(dirname(path));
         if (!parentDir.existsSync()) {
           parentDir.createSync(recursive: true);

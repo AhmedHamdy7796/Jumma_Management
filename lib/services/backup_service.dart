@@ -76,7 +76,7 @@ class BackupService {
   /// Returns the app-managed local backups directory, creating it if needed.
   Future<Directory> get localBackupsDir async {
     if (_customBackupsDir != null) {
-      final dir = Directory(_customBackupsDir!);
+      final dir = Directory(_customBackupsDir);
       if (!dir.existsSync()) dir.createSync(recursive: true);
       return dir;
     }

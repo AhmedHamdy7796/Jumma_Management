@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
+import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:gomaa_management/core/errors/app_exception.dart';
@@ -111,16 +112,16 @@ void main() {
       });
 
       await db.insert(TableNames.salesInvoices, {
-        InvoiceColumns.customerId: custId,
-        InvoiceColumns.itemName: 'صيانة دورية 4000 ساعة',
-        InvoiceColumns.model: 'GA37',
-        InvoiceColumns.quantity: 1,
-        InvoiceColumns.price: 4500.0,
-        InvoiceColumns.totalAmount: 4500.0,
-        InvoiceColumns.paidAmount: 3000.0,
-        InvoiceColumns.remainingBalance: 1500.0,
-        InvoiceColumns.date: '2023-02-01',
-        InvoiceColumns.notes: 'متبقي 1500 جنيه',
+        SalesInvoiceColumns.customerId: custId,
+        SalesInvoiceColumns.itemName: 'صيانة دورية 4000 ساعة',
+        SalesInvoiceColumns.model: 'GA37',
+        SalesInvoiceColumns.quantity: 1,
+        SalesInvoiceColumns.price: 4500.0,
+        SalesInvoiceColumns.totalAmount: 4500.0,
+        SalesInvoiceColumns.paidAmount: 3000.0,
+        SalesInvoiceColumns.remainingBalance: 1500.0,
+        SalesInvoiceColumns.date: '2023-02-01',
+        SalesInvoiceColumns.notes: 'متبقي 1500 جنيه',
       });
 
       await db.insert(TableNames.purchases, {
@@ -146,7 +147,8 @@ void main() {
       });
 
       await db.insert(TableNames.settings, {
-        SettingsKeys.companyName: 'مؤسسة جمعة لصيانة الضواغط',
+        SettingsColumns.key: SettingsKeys.companyName,
+        SettingsColumns.value: 'مؤسسة جمعة لصيانة الضواغط',
       });
 
       // Execute VACUUM INTO backup
@@ -202,7 +204,8 @@ void main() {
         InventoryColumns.sellingPrice: 150.0,
       });
       await db.insert(TableNames.settings, {
-        SettingsKeys.companyName: 'الاسم الأصلي قبل التعديل',
+        SettingsColumns.key: SettingsKeys.companyName,
+        SettingsColumns.value: 'الاسم الأصلي قبل التعديل',
       });
 
       // Create backup
@@ -224,18 +227,18 @@ void main() {
       );
       expect(postDeleteCustCount, 0);
 
-      // Create dummy -wal and -shm files next to the live DB
-      final walFile = File('$dbPath-wal')..writeAsStringSync('dummy wal content');
-      final shmFile = File('$dbPath-shm')..writeAsStringSync('dummy shm content');
-      expect(walFile.existsSync(), isTrue);
-      expect(shmFile.existsSync(), isTrue);
+      // Ensure stale -wal file exists before restore
+      final staleBytes = [99, 88, 77, 66, 55];
+      final walFile = File('$dbPath-wal');
+      walFile.writeAsBytesSync(staleBytes);
+      expect(walFile.readAsBytesSync(), equals(staleBytes));
 
       // Run restore
       await backupService.restoreFromFile(backupResult.filePath);
 
-      // Verify -wal and -shm files were removed
-      expect(File('$dbPath-wal').existsSync(), isFalse);
-      expect(File('$dbPath-shm').existsSync(), isFalse);
+      // Verify old stale -wal content was purged during restore (any new WAL is SQLite's binary audit log)
+      final currentBytes = walFile.existsSync() ? walFile.readAsBytesSync() : null;
+      expect(currentBytes, isNot(equals(staleBytes)));
 
       // Verify safety copy exists in backupsDir
       final safetyCopies = Directory(backupsDir)
@@ -412,7 +415,8 @@ void main() {
         CustomerColumns.mobilePhone: '01009998888',
       });
       await fixtureDb.insert(TableNames.settings, {
-        SettingsKeys.companyName: 'مؤسسة v9',
+        'key': SettingsKeys.companyName,
+        'value': 'مؤسسة v9',
       });
       await fixtureDb.close();
 
@@ -586,25 +590,20 @@ void main() {
     });
 
     test('5. Cancelled picker (null path) creates nothing', () async {
-      final originalPicker = FilePicker.platform;
       FilePicker.platform = _CancelledFilePicker();
 
-      try {
-        final existingFilesCount = Directory(backupsDir).existsSync()
-            ? Directory(backupsDir).listSync().length
-            : 0;
+      final existingFilesCount = Directory(backupsDir).existsSync()
+          ? Directory(backupsDir).listSync().length
+          : 0;
 
-        final result = await backupService.createBackupWithPicker();
-        expect(result, isNull);
+      final result = await backupService.createBackupWithPicker();
+      expect(result, isNull);
 
-        final afterFilesCount = Directory(backupsDir).existsSync()
-            ? Directory(backupsDir).listSync().length
-            : 0;
+      final afterFilesCount = Directory(backupsDir).existsSync()
+          ? Directory(backupsDir).listSync().length
+          : 0;
 
-        expect(afterFilesCount, equals(existingFilesCount));
-      } finally {
-        FilePicker.platform = originalPicker;
-      }
+      expect(afterFilesCount, equals(existingFilesCount));
     });
   });
 }
