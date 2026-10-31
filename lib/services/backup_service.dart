@@ -60,17 +60,26 @@ class BackupService {
 
   final DatabaseService _dbService;
   final AuditLogRepository _auditLogRepository;
+  final String? _customBackupsDir;
 
   BackupService({
     DatabaseService? dbService,
     AuditLogRepository? auditLogRepository,
+    String? customBackupsDir,
   })  : _dbService = dbService ?? DatabaseService.instance,
-        _auditLogRepository = auditLogRepository ?? AuditLogRepository();
+        _auditLogRepository = auditLogRepository ??
+            AuditLogRepository(dbService: dbService ?? DatabaseService.instance),
+        _customBackupsDir = customBackupsDir;
 
   // ── Public API ──────────────────────────────────────────────────────────────
 
   /// Returns the app-managed local backups directory, creating it if needed.
   Future<Directory> get localBackupsDir async {
+    if (_customBackupsDir != null) {
+      final dir = Directory(_customBackupsDir!);
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      return dir;
+    }
     final appDir = await getApplicationSupportDirectory();
     final dir = Directory(p.join(appDir.path, 'backups'));
     if (!dir.existsSync()) dir.createSync(recursive: true);
@@ -99,7 +108,9 @@ class BackupService {
           '${now.month.toString().padLeft(2, '0')}-'
           '${now.day.toString().padLeft(2, '0')}_'
           '${now.hour.toString().padLeft(2, '0')}'
-          '${now.minute.toString().padLeft(2, '0')}';
+          '${now.minute.toString().padLeft(2, '0')}'
+          '${now.second.toString().padLeft(2, '0')}_'
+          '${now.millisecond.toString().padLeft(3, '0')}';
       final fileName = 'gomaa_backup_$stamp.db';
       final destPath = p.join(targetDir.path, fileName);
 
@@ -135,16 +146,19 @@ class BackupService {
   }
 
   /// Lets the user pick a destination folder (via [FilePicker]) and saves the
-  /// backup there.  Falls back to [localBackupsDir] if the picker is cancelled
-  /// or unsupported.
-  Future<BackupResult> createBackupWithPicker() async {
+  /// backup there. Returns null if the picker is cancelled or fails, creating nothing.
+  Future<BackupResult?> createBackupWithPicker() async {
     String? chosenDir;
     try {
       chosenDir = await FilePicker.platform.getDirectoryPath(
         dialogTitle: 'اختر مجلد حفظ النسخة الاحتياطية',
       );
     } catch (_) {
-      // Platform may not support directory picker — fall through to default.
+      // Platform may not support directory picker
+      return null;
+    }
+    if (chosenDir == null || chosenDir.trim().isEmpty) {
+      return null;
     }
     return createBackupFile(destinationDir: chosenDir);
   }
@@ -176,7 +190,9 @@ class BackupService {
           '${now.year}-${now.month.toString().padLeft(2, '0')}-'
           '${now.day.toString().padLeft(2, '0')}_'
           '${now.hour.toString().padLeft(2, '0')}'
-          '${now.minute.toString().padLeft(2, '0')}';
+          '${now.minute.toString().padLeft(2, '0')}'
+          '${now.second.toString().padLeft(2, '0')}_'
+          '${now.millisecond.toString().padLeft(3, '0')}';
       final safetyDir = await localBackupsDir;
       final safetyPath = p.join(safetyDir.path, 'pre_restore_safety_$stamp.db');
       final safetyFile = File(safetyPath);
@@ -267,15 +283,30 @@ class BackupService {
 
     Database? candidateDb;
     try {
-      // Open read-only using sqflite_ffi so we never touch the live DB.
-      candidateDb = await databaseFactoryFfi.openDatabase(
-        path,
-        options: OpenDatabaseOptions(readOnly: true),
-      );
+      try {
+        // Open read-only using sqflite_ffi so we never touch the live DB.
+        candidateDb = await databaseFactoryFfi.openDatabase(
+          path,
+          options: OpenDatabaseOptions(readOnly: true),
+        );
+      } catch (e) {
+        throw BackupException(
+          technicalDetail: 'Candidate file cannot be opened as SQLite database: $e',
+          userMessage: 'الملف المحدد تالف أو ليس ملف قاعدة بيانات صالح.',
+        );
+      }
 
       // integrity_check
-      final integrityRows =
-          await candidateDb.rawQuery('PRAGMA integrity_check');
+      final List<Map<String, Object?>> integrityRows;
+      try {
+        integrityRows = await candidateDb.rawQuery('PRAGMA integrity_check');
+      } catch (e) {
+        throw BackupException(
+          technicalDetail: 'integrity_check failed with exception: $e',
+          userMessage: 'الملف المحدد تالف (فشل فحص التكامل).',
+        );
+      }
+
       final integrityResult =
           integrityRows.isNotEmpty ? integrityRows.first.values.first : null;
       if (integrityResult?.toString().toLowerCase() != 'ok') {

@@ -57,12 +57,16 @@ class BackupCubit extends Cubit<BackupState> {
   // ── Backup actions ──────────────────────────────────────────────────────────
 
   /// Creates a backup, prompting the user for a folder via the OS picker.
-  /// Falls back to the local backups folder if the picker is cancelled.
+  /// If the picker is cancelled, no backup is created and state resets to initial.
   Future<void> createBackupWithPicker() async {
     if (isClosed) return;
     emit(BackupLoading());
     try {
       final result = await _backupService.createBackupWithPicker();
+      if (result == null) {
+        if (!isClosed) emit(BackupInitial());
+        return;
+      }
       if (!isClosed) {
         emit(BackupSuccess(
           filePath: result.filePath,

@@ -27,6 +27,12 @@ class DatabaseService {
   /// Singleton instance. Inject this into every repository via constructor.
   static final DatabaseService instance = DatabaseService._();
 
+  /// Optional custom path (used in tests or custom storage configurations).
+  final String? _customDbPath;
+
+  /// Creates a [DatabaseService] targeting a specific [customDbPath].
+  DatabaseService.withPath(String customDbPath) : _customDbPath = customDbPath;
+
   static const _tag = 'DatabaseService';
   static const _dbFileName = 'gomaa_management.db';
 
@@ -44,6 +50,7 @@ class DatabaseService {
   ///
   /// Used by [BackupService] to locate the file for copying.
   Future<String> get databasePath async {
+    if (_customDbPath != null) return _customDbPath!;
     final dir = await getApplicationSupportDirectory();
     return join(dir.path, _dbFileName);
   }
@@ -69,16 +76,26 @@ class DatabaseService {
 
   Future<Database> _open() async {
     try {
-      final dir = await getApplicationSupportDirectory();
+      final String path;
+      final String backupsDir;
 
-      // Ensure the directory exists. On first install this creates the folder.
-      final appDir = Directory(dir.path);
-      if (!appDir.existsSync()) {
-        appDir.createSync(recursive: true);
+      if (_customDbPath != null) {
+        path = _customDbPath!;
+        final parentDir = Directory(dirname(path));
+        if (!parentDir.existsSync()) {
+          parentDir.createSync(recursive: true);
+        }
+        backupsDir = join(parentDir.path, 'backups');
+      } else {
+        final dir = await getApplicationSupportDirectory();
+        final appDir = Directory(dir.path);
+        if (!appDir.existsSync()) {
+          appDir.createSync(recursive: true);
+        }
+        path = join(dir.path, _dbFileName);
+        backupsDir = join(dir.path, 'backups');
       }
 
-      final path = join(dir.path, _dbFileName);
-      final backupsDir = join(dir.path, 'backups');
       await MigrationManager.createSafetyCopyBeforeUpgrade(path, backupsDir);
       AppLogger.instance.info('Opening database at: $path', tag: _tag);
 
